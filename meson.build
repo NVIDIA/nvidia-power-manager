@@ -1,6 +1,12 @@
 project(
     'nvidia-power-manager',
-    'cpp'
+    'cpp',
+    version: '0.1', meson_version: '>=0.57.0',
+    default_options: [
+          'warning_level=3',
+          'cpp_std=c++20',
+          'b_lto=true',
+        ]
 )
 
 executable(
@@ -18,3 +24,4 @@ executable(
     install_dir: get_option('bindir')
 )
 
+subdir('nvidia-power-supply')

@@ -1,0 +1,11 @@
+[Unit]
+Description=NVIDIA power supply monitor
+[Service]
+Restart=always
+Type=dbus
+ExecStart=/usr/bin/env /usr/bin/nvidia-power-supply-monitor
+SyslogIdentifier=nvidia-power-supply-monitor
+BusName=com.Nvidia.Powersupply
+
+[Install]
+WantedBy=multi-user.target
