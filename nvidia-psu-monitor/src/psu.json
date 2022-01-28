@@ -1,0 +1,22 @@
+{
+  "psu_config": 
+    {
+      "PSU_DETECT_N": {
+        "RegisterAddress": 37
+      },
+      "PSU_ALERT_N": {
+        "RegisterAddress": 38
+      },
+      "PSU_WORK_N": {
+        "RegisterAddress": 39
+      },
+      "PSU_EVENT": {
+        "RegisterAddress": 40
+      },
+      "i2c": {
+        "Bus": 2,
+        "SlaveAddress": 60
+      }
+    }
+  
+}

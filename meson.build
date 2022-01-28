@@ -26,3 +26,4 @@ executable(
 
 subdir('nvidia-power-supply')
 subdir('nvidia-cpld')
+subdir('nvidia-psu-monitor')
