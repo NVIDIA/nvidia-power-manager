@@ -19,4 +19,7 @@ phosphor_logging = dependency('phosphor-logging')
 
 subdir('services')
 subdir('src')
-subdir('tests')
+
+if not build_tests.disabled()
+    subdir('tests')
+endif
