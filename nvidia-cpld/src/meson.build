@@ -13,3 +13,4 @@ executable('nvidia-cpld-monitor', 'main.cpp', 'cpld_manager.cpp',
                             ],
                install : true,
                install_dir : get_option('bindir'))
+install_headers('cpld_util.hpp')
