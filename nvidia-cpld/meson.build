@@ -17,6 +17,8 @@ fmt = dependency('fmt')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 phosphor_logging = dependency('phosphor-logging')
 
+install_data('cpldi2ccmd.sh', install_dir : get_option('bindir'))
+
 subdir('services')
 subdir('src')
 

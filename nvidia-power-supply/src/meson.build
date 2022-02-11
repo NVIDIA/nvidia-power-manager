@@ -12,3 +12,4 @@ executable('nvidia-power-supply-monitor', 'main.cpp', 'psu_manager.cpp',
                 ],
                install : true,
                install_dir : get_option('bindir'))
+install_headers('psu_util.hpp')
