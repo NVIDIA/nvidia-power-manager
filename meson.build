@@ -9,12 +9,6 @@ project(
         ]
 )
 
-executable(
-    'nvidia-power-mgrd',
-    'src/power_manager_main.cpp',
-    install: true,
-    install_dir: get_option('bindir')
-)
 
 
 
@@ -23,3 +17,4 @@ subdir('nvidia-power-supply')
 subdir('nvidia-cpld')
 subdir('nvidia-psu-monitor')
 subdir('cpld_utility')
+subdir('src')

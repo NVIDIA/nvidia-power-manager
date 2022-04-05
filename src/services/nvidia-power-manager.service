@@ -1,0 +1,13 @@
+[Unit]
+Description=NVIDIA power manager service
+Requires=nvidia-psu-monitor.service
+After=xyz.openbmc_project.EntityManager.service
+[Service]
+Restart=always
+Type=dbus
+ExecStart=nvidia-power-mgrd
+SyslogIdentifier=nvidia-power-mgrd
+BusName=com.Nvidia.Powermanager
+
+[Install]
+WantedBy=multi-user.target

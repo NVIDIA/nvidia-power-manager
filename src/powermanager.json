@@ -1,0 +1,441 @@
+{
+    "PowerRedundancyConfigs": [
+        {
+            "objectName": "/xyz/openbmc_project/sensors/power/psu_drop_to_1_event",
+            "interfaceName": "xyz.openbmc_project.Object.Enable",
+            "propertyName": "Enabled",
+            "action": [
+                {
+                    "trigger": true,
+                    "methodName": "IpmiSelAddOem",
+                    "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                    "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                    "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                    "appendData": [
+                        {
+                            "dataType": "s",
+                            "data": "OEM psuDropTo1EventTriggered SEL Entry"
+                        },
+                        {
+                            "dataType": "y",
+                            "data": [6, 255 , 255]
+                        },
+                        {
+                            "dataType": "y",
+                            "data": 201
+                        }
+                    ]
+                },
+                {
+                    "trigger": true,
+                    "conditionBlock": [
+                        {
+                            "serviceName": "com.Nvidia.PsuEvent",
+                            "objectpath": "/xyz/openbmc_project/sensors/power/MBON_GBOFF_event",
+                            "interfaceName": "xyz.openbmc_project.Object.Enable" ,
+                            "propertyName": "Enabled",
+                            "timeDelay": 10,
+                            "propertyValue": true
+
+                        }
+                    ],
+                    "methodName": "Set",
+                    "serviceName": "xyz.openbmc_project.State.Chassis",
+                    "objectpath": "/xyz/openbmc_project/state/chassis0",
+                    "interfaceName": "org.freedesktop.DBus.Properties",
+                    "appendData": [
+                        {
+                            "dataType": "s",
+                            "data": "xyz.openbmc_project.State.Chassis"
+                        },
+                        {
+                            "dataType": "s",
+                            "data": "RequestedPowerTransition"
+                        },
+                        {
+                            "dataType": "s",
+                            "data": "xyz.openbmc_project.State.Chassis.Transition.Off" ,
+                            "variant": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "objectName": "/xyz/openbmc_project/sensors/power/psu_drop_to_2_event",
+            "interfaceName": "xyz.openbmc_project.Object.Enable",
+            "propertyName": "Enabled",
+            "action": [
+                {
+                    "trigger": true,
+                    "methodName": "IpmiSelAddOem",
+                    "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                    "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                    "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                    "appendData": [
+                        {
+                            "dataType": "s",
+                            "data": "OEM psuDropTo2EventTriggered SEL Entry"
+                        },
+                        {
+                            "dataType": "y",
+                            "data": [5, 255 , 255]
+                        },
+                        {
+                            "dataType": "y",
+                            "data": 201
+                        }
+                    ]
+                },
+                {
+                    "trigger": true,
+                    "conditionBlock": [
+                        {
+                            "serviceName": "com.Nvidia.PsuEvent",
+                            "objectpath": "/xyz/openbmc_project/sensors/power/MBON_GBOFF_event",
+                            "interfaceName": "xyz.openbmc_project.Object.Enable" ,
+                            "propertyName": "Enabled",
+                            "timeDelay": 10,
+                            "propertyValue": true
+
+                        }
+                    ],
+                    "methodName": "Set",
+                    "serviceName": "xyz.openbmc_project.State.Chassis",
+                    "objectpath": "/xyz/openbmc_project/state/chassis0",
+                    "interfaceName": "org.freedesktop.DBus.Properties",
+                    "appendData": [
+                        {
+                            "dataType": "s",
+                            "data": "xyz.openbmc_project.State.Chassis"
+                        },
+                        {
+                            "dataType": "s",
+                            "data": "RequestedPowerTransition"
+                        },
+                        {
+                            "dataType": "s",
+                            "data": "xyz.openbmc_project.State.Chassis.Transition.On" ,
+                            "variant": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "objectName": "/xyz/openbmc_project/sensors/power/MBON_GBOFF_event",
+            "interfaceName": "xyz.openbmc_project.Object.Enable",
+            "propertyName": "Enabled",
+            "action": [
+                {
+                    "trigger": true,
+                    "conditionBlock": [
+                        {
+                            "serviceName": "com.Nvidia.PsuEvent",
+                            "objectpath": "/xyz/openbmc_project/sensors/power/psu_drop_to_1_event",
+                            "interfaceName": "xyz.openbmc_project.Object.Enable" ,
+                            "propertyName": "Enabled",
+                            "propertyValue": true
+
+                        }
+                    ],
+                    "methodName": "IpmiSelAddOem",
+                    "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                    "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                    "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                    "appendData": [
+                        {
+                            "dataType": "s",
+                            "data": "OEM MBON_GBOFF_event SEL Entry due to psu_drop_to_1_event"
+                        },
+                        {
+                            "dataType": "y",
+                            "data": [3, 255 , 255]
+                        },
+                        {
+                            "dataType": "y",
+                            "data": 201
+                        }
+                    ]
+                },
+                {
+                    "trigger": true,
+                    "conditionBlock": [
+                        {
+                            "serviceName": "com.Nvidia.PsuEvent",
+                            "objectpath": "/xyz/openbmc_project/sensors/power/psu_drop_to_2_event",
+                            "interfaceName": "xyz.openbmc_project.Object.Enable" ,
+                            "propertyName": "Enabled",
+                            "propertyValue": true
+
+                        }
+                    ],
+                    "methodName": "IpmiSelAddOem",
+                    "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                    "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                    "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                    "appendData": [
+                        {
+                            "dataType": "s",
+                            "data": "OEM MBON_GBOFF_event SEL Entry psu_drop_to_2_event"
+                        },
+                        {
+                            "dataType": "y",
+                            "data": [4, 255 , 255]
+                        },
+                        {
+                            "dataType": "y",
+                            "data": 201
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "powerState": {
+        "objectName": "/xyz/openbmc_project/state/chassis0",
+        "interfaceName": "xyz.openbmc_project.State.Chassis",
+        "propertyName": "CurrentPowerState",
+        "action": [
+            {
+                "trigger": "xyz.openbmc_project.State.Chassis.PowerState.On",
+                "methodName": "IpmiSelAddOem",
+                "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                "appendData": [
+                    {
+                        "dataType": "s",
+                        "data": "chassis power on  SEL Entry"
+                    },
+                    {
+                        "dataType": "y",
+                        "data": [0, 255 , 255]
+                    },
+                    {
+                        "dataType": "y",
+                        "data": 201
+                    }
+                ]
+            }
+        ]
+    },
+    "powerCappingConfigs":[
+        {
+            "objectName": "/xyz/openbmc_project/control/power/CurrentChassisLimit",
+            "interfaceName": "xyz.openbmc_project.Control.Power.Cap",
+            "module":"System",
+            "property": [
+                {
+                    "propertyName": "PowerCap",
+                     "value": 6500,
+                     "flags": "sdbusplus::asio::PropertyPermission::readWrite" ,
+                     "action":[
+                        {
+                            "methodName": "IpmiSelAddOem",
+                            "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                            "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                            "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                            "appendData": [
+                                {
+                                    "dataType": "s",
+                                    "data": "OEM current chassis limit changed SEL Entry"
+                                },
+                                {
+                                    "data": "OEM",
+                                    "key": "AddSel"
+                                },
+                                {
+                                    "dataType": "y",
+                                    "data": 201
+                                }
+                            ]
+                        }
+                     ]    
+                },
+                {
+                    "propertyName": "MinPowerCapValue",
+                     "value": 4900,
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly"
+                },
+                {
+                    "propertyName": "MaxPowerCapValue",
+                     "value": 6500,
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly"
+                },
+                {
+                    "propertyName": "Associations",
+                     "value": " ",
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly"
+                }
+            ]
+
+        },
+        {
+            "objectName": "/xyz/openbmc_project/control/power/CurrentChassisLimit",
+            "interfaceName": "xyz.openbmc_project.Control.Power.Mode",
+            "module":"System",
+             "property":[
+                 {
+                    "propertyName": "PowerMode",
+                     "value": "xyz.openbmc_project.Control.Power.Mode.PowerMode.MaximumPerformance",
+                     "flags": "sdbusplus::asio::PropertyPermission::readWrite",
+                     "action":[
+                        {
+                            "methodName": "IpmiSelAddOem",
+                            "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                            "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                            "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                            "appendData": [
+                                {
+                                    "dataType": "s",
+                                    "data": "OEM current PowerMode changed SEL Entry"
+                                },
+                                {
+                                    "dataType": "y",
+                                    "data": [1, 255 , 255]
+                                },
+                                {
+                                    "dataType": "y",
+                                    "data": 201
+                                }
+                            ]
+                        },{
+                            "methodName": "Set" ,
+                            "serviceName": "xyz.openbmc_project.GpuMgr",
+                            "objectpath": "/xyz/openbmc_project/inventory/system/chassis/HGX_Baseboard_0",
+                            "interfaceName":"org.freedesktop.DBus.Properties",
+                            "appendData": [
+                                {
+                                    "dataType": "s",
+                                    "data": "xyz.openbmc_project.Control.Power.Mode"
+                                },
+                                {
+                                    "dataType": "s",
+                                    "data": "PowerMode"
+                                },
+                                {
+                                    "dataType": "s",
+                                    "data": "PropertyValue"
+                                }
+                            ]
+                        }
+                     ] 
+                }
+                ]
+
+        },
+        {
+            "objectName": "/xyz/openbmc_project/control/power/ChassisLimitP",
+            "interfaceName": "xyz.openbmc_project.Control.Power.Cap",
+            "module":"System",
+             "property":[
+                 {
+                    "propertyName": "MaxPowerCapValue",
+                     "value": 6500,
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly"
+                 }
+                ]
+
+        },
+        {
+            "objectName": "/xyz/openbmc_project/control/power/ChassisLimitQ",
+            "interfaceName": "xyz.openbmc_project.Control.Power.Cap",
+            "module":"System",
+             "property":[
+                 {
+                    "propertyName": "MaxPowerCapValue",
+                     "value": 4900,
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly"
+                 }
+                ]
+
+        },
+        {
+            "objectName": "/xyz/openbmc_project/control/power/RestOfSystemPower",
+            "interfaceName": "xyz.openbmc_project.Sensor.Value",
+            "module":"RestOFSystem",
+             "property":[
+                 {
+                    "propertyName": "Value",
+                     "value": 3300,
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly"
+                 }
+                ]
+
+        },{
+            "objectName": "/xyz/openbmc_project/control/power/GPUPowerLimit",
+            "interfaceName": "xyz.openbmc_project.Control.Power.Cap",
+            "module":"GPU",
+             "property":[
+                 {
+                    "propertyName": "PowerCap",
+                     "value": 400,
+                     "flags": "sdbusplus::asio::PropertyPermission::readOnly",
+                     "action":[
+                        {
+                            "methodName": "IpmiSelAddOem",
+                            "serviceName": "xyz.openbmc_project.Logging.IPMI",
+                            "objectpath": "/xyz/openbmc_project/Logging/IPMI",
+                            "interfaceName": "xyz.openbmc_project.Logging.IPMI",
+                            "appendData": [
+                                {
+                                    "dataType": "s",
+                                    "data": "OEM GPU PowerLimit changed SEL Entry"
+                                },
+                                {
+                                    "dataType": "y",
+                                    "data": [1, 255 , 255]
+                                },
+                                {
+                                    "dataType": "y",
+                                    "data": 201
+                                }
+                            ]
+                        },{
+                            "conditionBlock": [
+                                {
+                                    "serviceName": "com.Nvidia.Powermanager",
+                                    "objectpath": "/xyz/openbmc_project/control/power/CurrentChassisLimit",
+                                    "interfaceName": "xyz.openbmc_project.Control.Power.Mode",
+                                    "propertyName": "PowerMode",
+                                    "propertyValue": "xyz.openbmc_project.Control.Power.Mode.PowerMode.OEM"
+                                }
+                            ],
+                            "methodName": "Set" ,
+                            "serviceName": "xyz.openbmc_project.GpuMgr",
+                            "objectpath": "/xyz/openbmc_project/inventory/system/chassis/HGX_Baseboard_0",
+                            "interfaceName":"org.freedesktop.DBus.Properties",
+                            "appendData": [
+                                {
+                                    "dataType": "s",
+                                    "data": "xyz.openbmc_project.Control.Power.Cap"
+                                },
+                                {
+                                    "dataType": "s",
+                                    "data": "SetPoint"
+                                },
+                                {
+                                    "dataType": "s",
+                                    "data": "PropertyValue"
+                                }
+                            ]
+                        }
+                     ] 
+                 }
+                ]
+
+        }
+    ],
+    "powerCappingAlgorithm":[
+        {
+            "powerModule":"GPU",
+            "powerCapPercentage":49,
+            "numOfDevices": 1
+            
+        }
+    ],
+    "powerCappingSavePath":"/etc/powerCap.bin" 
+
+    
+}
