@@ -2,6 +2,7 @@
 #include <cstdint> // uint8_t (8 bits) and uint16_t (16 bits)
 #include <cstdlib> // <stdlib.h>
 #include <cstring> // <string.h>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -19,6 +20,46 @@
 
 #define MAX_RETRY 3
 #define DELAY_100_US 100
+namespace fs = std::filesystem;
+
+int unTar(const std::string &tarFilePath, const std::string &extractDirPath) {
+  if (tarFilePath.empty()) {
+    cerr << "TarFilePath is empty - " << tarFilePath.c_str() << endl;
+    return -1;
+  }
+  if (extractDirPath.empty()) {
+    cerr << "ExtractDirPath is empty - " << extractDirPath.c_str() << endl;
+    return -1;
+  }
+
+  VERBOSE << "Untaring {PATH} to {EXTRACTIONDIR}"
+          << " PATH -" << tarFilePath.c_str() << " EXTRACTIONDIR- "
+          << extractDirPath.c_str() << endl;
+  int status = 0;
+  pid_t pid = fork();
+
+  if (pid == 0) {
+    // child process
+    execl("/bin/tar", "tar", "-xf", tarFilePath.c_str(), "-C",
+          extractDirPath.c_str(), (char *)0);
+    // execl only returns on fail
+    cerr << "Failed to execute untar on " << tarFilePath << endl;
+    return -1;
+  } else if (pid > 0) {
+    waitpid(pid, &status, 0);
+    if (WEXITSTATUS(status)) {
+      cerr << "Failed to execute untar on " << tarFilePath.c_str()
+           << " STATUS - " << status << endl;
+      return -1;
+    }
+  } else {
+    cerr << "Failed to execute untar on " << tarFilePath.c_str() << " ERRNO - "
+         << errno << endl;
+    return -1;
+  }
+
+  return 0;
+}
 
 int file_lock(int fd) {
   /* Lock the file from beginning to end, blocking if it is already locked */
@@ -63,20 +104,20 @@ int file_unlock(int fd) {
 #ifdef STANDALONE_UTILITY
 int main(int argc, char **argv) {
   const char *programName = argv[0];
-  int bus, device_slaveaddr, device_section;
-  string imageFilename, cmd;
+  int bus, device_slaveaddr;
+  string cmd;
+  fs::path tarImageFilename;
   int fd = -1, i = 0, retry = 0, ret = 0;
   auto printUsage = [programName]() {
-    fprintf(stderr, "Usage: \n");
-    fprintf(stderr, " %s version [bus] [slave address]  [PSU section]  \n",
-            programName);
-    fprintf(stderr,
-            " %s fwupgrade [bus] [slave address] [PSU section] [image file] \n",
-            programName);
-    fprintf(stderr, " %s activate [bus] [slave address]  [PSU section]\n",
-            programName);
-    fprintf(stderr, " options:\n");
-    fprintf(stderr, " -v  verbose\n");
+    std::cerr << "Usage: " << std::endl;
+    std::cerr << programName << " version [bus] [slave address] " << std::endl;
+    std::cerr << programName
+              << " fwupgrade [bus] [slave address] [ Tar image file]  "
+              << std::endl;
+    std::cerr << programName << " activate [bus] [slave address]  "
+              << std::endl;
+    std::cerr << "options: " << std::endl;
+    std::cerr << " -v  verbose " << std::endl;
   };
 
   int opt;
@@ -96,30 +137,29 @@ int main(int argc, char **argv) {
   if (optind >= argc) {
     printUsage();
     cout << statusToString(ErrorStatus::ERROR_INPUT_ARGUMENTS) << endl;
-    return static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS);
+    return -(static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS));
   }
 
   VERBOSE << "argc=" << argc << endl;
   VERBOSE << "optind=" << optind << endl;
-  if (argc < 5) {
+  if (argc < 4) {
     printUsage();
     cout << statusToString(ErrorStatus::ERROR_INPUT_ARGUMENTS) << endl;
-    return static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS);
+    return -(static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS));
   }
   cmd = string(argv[optind]);
   bus = stoi(argv[optind + 1], nullptr, 0);
   device_slaveaddr = stoi(argv[optind + 2], nullptr, 0);
-  device_section = stoi(argv[optind + 3], nullptr, 0);
 
 #else
 int componentSendCommand(string cmd, int bus, int device_slaveaddr,
-                         int device_section, string imageFilename) {
+                         fs::path tarImageFilename) {
   int fd = -1, i = 0, retry = 0, ret = 0;
 #endif
   fd = I2c::openBus(bus);
   if (fd < 0) {
     cout << "Error opening i2c file: " << strerror(errno) << endl;
-    return static_cast<int>(ErrorStatus::ERROR_OPEN_I2C_DEVICE);
+    return -(static_cast<int>(ErrorStatus::ERROR_OPEN_I2C_DEVICE));
   }
   for (i = 0; i < MAX_RETRY; i++) {
     /* Get shared lock */
@@ -130,42 +170,81 @@ int componentSendCommand(string cmd, int bus, int device_slaveaddr,
       cerr << __func__ << ":" << __LINE__ << "-"
            << "ERROR: Getting lock Failed!!!" << endl;
       close(fd);
-      return EXIT_FAILURE;
+      return -EXIT_FAILURE;
     }
     usleep(DELAY_100_US);
   }
-  VERBOSE << "[bus]= " << bus << " [slave address]= " << device_slaveaddr
-          << " [PSU section]= " << device_section << endl;
-  DeltaPsu device(fd, device_slaveaddr, device_section);
+  cout << " Firmware update issued on [bus]= " << bus
+       << " [slave address]= " << device_slaveaddr << endl;
+  DeltaPsu device(fd, device_slaveaddr);
   if (cmd == "version") {
     VERBOSE << "Retriving version number" << endl;
     device.fwversion();
   } else if (cmd == "fwupgrade") {
 #ifdef STANDALONE_UTILITY
     VERBOSE << "argc=" << argc << endl;
-    if (argc < 6) {
+    if (argc < 5) {
       printUsage();
       cout << statusToString(ErrorStatus::ERROR_INPUT_ARGUMENTS) << endl;
       file_unlock(fd);
       close(fd);
-      return static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS);
+      return -(static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS));
     }
-    imageFilename = argv[optind + 4];
+    tarImageFilename = argv[optind + 3];
 #endif
-    do {
-      VERBOSE << "starting fwupgrade process " << endl;
-      ret = device.fwupdate(imageFilename.c_str());
-      if (ret == 0) {
-        break;
-      } else if (retry > MAX_RETRY) {
-        VERBOSE << "retry= " << retry << endl;
-        ret = static_cast<int>(ErrorStatus::ERROR_UPG_FAIL);
-        break;
-      } else {
-
-        retry++;
+    if (!fs::exists(tarImageFilename)) {
+      file_unlock(fd);
+      close(fd);
+      return -(static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS));
+    }
+    if (unTar(tarImageFilename.string(),
+              tarImageFilename.parent_path().string()) < 0) {
+      file_unlock(fd);
+      close(fd);
+      return -(static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS));
+    }
+    vector<pair<int, fs::path>> imageParameters;
+    fs::path extractedDirectory;
+    for (auto const &dir_entry :
+         fs::recursive_directory_iterator(tarImageFilename.parent_path())) {
+      if (dir_entry.is_regular_file()) {
+        std::cout << dir_entry.path().filename() << '\n';
+        if (dir_entry.path().filename().string().find("Pri") !=
+            std::string::npos) {
+          imageParameters.push_back(make_pair(0, dir_entry.path()));
+        } else if (dir_entry.path().filename().string().find("Sec") !=
+                   std::string::npos) {
+          imageParameters.push_back(make_pair(1, dir_entry.path()));
+        } else if (dir_entry.path().filename().string().find("Com") !=
+                   std::string::npos) {
+          imageParameters.push_back(make_pair(2, dir_entry.path()));
+        }
+      } else if (dir_entry.is_directory()) {
+        extractedDirectory = dir_entry.path();
       }
-    } while (1);
+    }
+
+    for (const auto &image_entry : imageParameters) {
+      retry = 0;
+      do {
+        VERBOSE << "starting fwupgrade process " << endl;
+        ret = device.fwupdate(image_entry.second.c_str(), image_entry.first);
+        if (ret == 0) {
+          break;
+        } else if (retry > MAX_RETRY) {
+          VERBOSE << "retry= " << retry << endl;
+          ret = -(static_cast<int>(ErrorStatus::ERROR_UPG_FAIL));
+          break;
+        } else {
+
+          retry++;
+        }
+      } while (1);
+    }
+
+    if (fs::exists(extractedDirectory)) {
+      fs::remove_all(extractedDirectory);
+    }
   } else if (cmd == "activate") {
     VERBOSE << "Activate the device" << endl;
     device.activate();
@@ -176,7 +255,7 @@ int componentSendCommand(string cmd, int bus, int device_slaveaddr,
 #endif
     file_unlock(fd);
     close(fd);
-    return static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS);
+    return -(static_cast<int>(ErrorStatus::ERROR_INPUT_ARGUMENTS));
   }
   if (fd != -1) {
     file_unlock(fd);

@@ -6,7 +6,6 @@
 string=''
 removenonacii=0
 i2c_read() {
-    i2cset -f -y $1 0x70 0x00 0x0$(($2 - 0x3c))
     data=$(i2cget -f -y $1 $2 $3 i $4)
 
     if [[ -z "$data" ]]; then
@@ -42,15 +41,18 @@ if [ $# -le 1 ]; then
     exit 1
 fi
 
-psu_number=$((0x40 + $1))
+
 bus_number=3
 if [ "$1" -ge 0 ] && [ "$1" -le 2 ]; then
-    bus_number=3;
+    psu_number=$((0x40 + $1))
+    bus_number=$((0xD7 + $1))
 elif [ "$1" -ge 3 ] && [ "$1" -le 5 ]; then
-    bus_number=4;
+    bus_number=$((0xD8 + $1));
+    psu_number=$((0x40 + $1 - 3))
 fi
 
 #MOCK
+:`
 i2c_read() {
     # echo $1 $2 $3 $4
     if [ $3 = "0x9e" ]; then
@@ -64,7 +66,7 @@ i2c_read() {
     elif [ $3 = "0xe2" ]; then
         string="01.05"
     fi
-}
+}`
 version() {
     i2c_read $bus_number $psu_number 0xe2 11
 }
