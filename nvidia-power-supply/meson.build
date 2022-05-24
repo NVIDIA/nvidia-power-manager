@@ -11,6 +11,8 @@ cdata.set_quoted(
 cdata.set_quoted(
     'BASE_INV_PATH', '/xyz/openbmc_project/inventory/system/chassis/motherboard')
 
+cdata.set_quoted(
+    'OBJ_MANAGER_PATH', '/')
 
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')
