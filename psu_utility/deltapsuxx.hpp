@@ -179,24 +179,8 @@ public:
   DeltaPsu(DeltaPsu &&) = delete;
   DeltaPsu &operator=(DeltaPsu &&) = delete;
   ~DeltaPsu() = default;
-  DeltaPsu(const int &busfd, const int &slaveaddr, const int &section)
-      : fd(busfd), slave(slaveaddr), section_flash(section) {
-    for (int i = 0; i < MCU_MAX_NUM; i++) {
-
-      VERBOSE << "SectionFlash: " << MCU_hdlr[i].SectionFlash << endl;
-      if (section_flash == MCU_hdlr[i].SectionFlash) {
-        mcuID = MCU_hdlr[i].McuID;
-        VERBOSE << "MCU_ID: " << mcuID << endl;
-        bytePerPage = MCU_hdlr[i].BytePerPage;
-        bytePerPacket = MCU_hdlr[i].BytePerPacket;
-        bootStat = MCU_hdlr[i].BootSTA;
-        delay1 = MCU_hdlr[i].Delay1;
-        delay2 = MCU_hdlr[i].Delay2;
-        delay3 = MCU_hdlr[i].Delay3;
-        break;
-      }
-    }
-  }
+  DeltaPsu(const int &busfd, const int &slaveaddr)
+      : fd(busfd), slave(slaveaddr) {}
 
   int unlockDevice(uint8_t *write_buffer, uint8_t *read_buffer) {
     int ret = 0;
@@ -219,7 +203,7 @@ public:
 
   int checkUpgradeModeStatus(uint8_t *write_buffer, uint8_t *read_buffer) {
     int ret = 0;
-    cout << "#5 Check Upgrade Mode Status..." << endl;
+    VERBOSE << "#5 Check Upgrade Mode Status..." << endl;
     memset(write_buffer, 0x00, MAX_BUFFER_SIZE);
     memset(read_buffer, 0x00, MAX_BUFFER_SIZE);
     write_buffer[0] = REG_BOOT_STATUS_MODE;
@@ -232,7 +216,7 @@ public:
 
   int setBootFlag(uint8_t *write_buffer, uint8_t *read_buffer) {
     int ret = 0;
-    cout << "#4 Set Boot Flag..." << endl;
+    VERBOSE << "#4 Set Boot Flag..." << endl;
     memset(write_buffer, 0x00, MAX_BUFFER_SIZE);
     memset(read_buffer, 0x00, MAX_BUFFER_SIZE);
     write_buffer[0] = REG_BOOT_STATUS_MODE;
@@ -248,7 +232,7 @@ public:
 
   int resetBootFlag(uint8_t *write_buffer, uint8_t *read_buffer) {
     int ret = 0;
-    cout << "#4 reset Boot Flag..." << endl;
+    VERBOSE << "#4 reset Boot Flag..." << endl;
     memset(write_buffer, 0x00, MAX_BUFFER_SIZE);
     memset(read_buffer, 0x00, MAX_BUFFER_SIZE);
     write_buffer[0] = REG_BOOT_STATUS_MODE;
@@ -264,7 +248,7 @@ public:
 
   int disableDeviceOutput(uint8_t *write_buffer, uint8_t *read_buffer) {
     int ret = 0;
-    cout << "#2 Disable PSU output..." << endl;
+    VERBOSE << "#2 Disable PSU output..." << endl;
     memset(write_buffer, 0x00, MAX_BUFFER_SIZE);
     memset(read_buffer, 0x00, MAX_BUFFER_SIZE);
     write_buffer[0] = 0x00;
@@ -288,7 +272,7 @@ public:
 
   int enableDeviceOutput(uint8_t *write_buffer, uint8_t *read_buffer) {
     int ret = 0;
-    cout << "Enable PSU output..." << endl;
+    VERBOSE << "Enable PSU output..." << endl;
     memset(write_buffer, 0x00, MAX_BUFFER_SIZE);
     memset(read_buffer, 0x00, MAX_BUFFER_SIZE);
     write_buffer[0] = 0x01;
@@ -301,9 +285,9 @@ public:
     return EXIT_SUCCESS;
   }
 
-  int fwupdate(string imageFilename) {
-    VERBOSE << "fwupdate is called" << endl;
-    puts(imageFilename.c_str());
+  int fwupdate(string imageFilename, int section) {
+    cout << "fwupdate is called with Image=" << imageFilename.c_str()
+         << " on section= " << section << endl;
 
     int fw_file = -1;
     struct stat st;
@@ -320,6 +304,22 @@ public:
     int blockIndex;                              //
     int Flag_BreakFlag = 0,
         Flag_SetUnlockBootflag = 0; // Use to exit the 2 for loop
+    section_flash = section;
+    for (int i = 0; i < MCU_MAX_NUM; i++) {
+
+      VERBOSE << "SectionFlash: " << MCU_hdlr[i].SectionFlash << endl;
+      if (section_flash == MCU_hdlr[i].SectionFlash) {
+        mcuID = MCU_hdlr[i].McuID;
+        VERBOSE << "MCU_ID: " << mcuID << endl;
+        bytePerPage = MCU_hdlr[i].BytePerPage;
+        bytePerPacket = MCU_hdlr[i].BytePerPacket;
+        bootStat = MCU_hdlr[i].BootSTA;
+        delay1 = MCU_hdlr[i].Delay1;
+        delay2 = MCU_hdlr[i].Delay2;
+        delay3 = MCU_hdlr[i].Delay3;
+        break;
+      }
+    }
 
     VERBOSE << "#0 Check FW Version..." << endl;
     ret = fwversion();
@@ -359,11 +359,11 @@ public:
     }
 
     fw_crc16 = Crc::crc16(fw_buf, static_cast<uint32_t>(st.st_size));
-    cout << "PSU FW CRC16 Check: " << std::hex << static_cast<int>(fw_crc16)
-         << endl;
+    VERBOSE << "PSU FW CRC16 Check: " << std::hex << static_cast<int>(fw_crc16)
+            << endl;
     CRC16_Data = fw_crc16;
-    cout << "FW Image CRC16 Checksum: " << std::hex
-         << static_cast<int>(CRC16_Data) << endl;
+    VERBOSE << "FW Image CRC16 Checksum: " << std::hex
+            << static_cast<int>(CRC16_Data) << endl;
 
     // 3. Unlock upgrade command with password... (Operation: 0xF0 0x0C MCU_ID
     // [ECD16010081]-ASCII PEC)  => retry 5
@@ -379,7 +379,8 @@ public:
     ret = checkUpgradeModeStatus(write_buffer, read_buffer);
     if (ret)
       goto exit;
-    cout << "Status: " << std::hex << static_cast<int>(read_buffer[0]) << endl;
+    VERBOSE << "Status: " << std::hex << static_cast<int>(read_buffer[0])
+            << endl;
     if ((read_buffer[0] & bootStat) != bootStat) {
       /* 2. Turn off the PSU output... (Operation: 0x01 0x00) */
       ret = disableDeviceOutput(write_buffer, read_buffer);
@@ -415,7 +416,8 @@ public:
     ret = checkUpgradeModeStatus(write_buffer, read_buffer);
     if (ret)
       goto exit;
-    cout << "Status: " << std::hex << static_cast<int>(read_buffer[0]) << endl;
+    VERBOSE << "Status: " << std::hex << static_cast<int>(read_buffer[0])
+            << endl;
     if ((read_buffer[0] & bootStat) != bootStat) // Bit2=1? No!
     {
       Flag_SetUnlockBootflag++;
@@ -450,7 +452,7 @@ public:
          * Block_LO Block_HI Data[16] PEC) */
         int Flag_RepeatTrans = 0; // mv
       RepeatTrans:                // mv
-        cout << "#6 Transmit into RAM... " << endl;
+        VERBOSE << "#6 Transmit into RAM... " << endl;
         memset(write_buffer, 0x00, sizeof(write_buffer));
         memset(read_buffer, 0x00, sizeof(read_buffer));
         write_buffer[0] = REG_TRANSMIT_RAM;
@@ -480,8 +482,8 @@ public:
 
           // 5. Check upgrade mode status ... (0xF1)
           ret = checkUpgradeModeStatus(write_buffer, read_buffer);
-          cout << "Status: " << std::hex << static_cast<int>(read_buffer[0])
-               << endl;
+          VERBOSE << "Status: " << std::hex << static_cast<int>(read_buffer[0])
+                  << endl;
           if ((read_buffer[0] & TRANS_ERR) == TRANS_ERR) {
             cerr << __func__ << ":" << __LINE__ << "-"
                  << "#6 Programming 'Transmit' status failed: " << TRANS_ERR
@@ -506,7 +508,7 @@ public:
 
       /* 7. Write RAM Data into FLASH (256 bytes) (Operation: 0xF3 0x03(byte
        * count) MCU_ID PageAddr_LO PageAddr_HI PEC) */
-      cout << "#7 Write/Commit RAM Data into Flash... " << endl;
+      VERBOSE << "#7 Write/Commit RAM Data into Flash... " << endl;
       memset(write_buffer, 0x00, sizeof(write_buffer));
       memset(read_buffer, 0x00, sizeof(read_buffer));
       write_buffer[0] = REG_TRANSMIT_FLASH;
@@ -543,8 +545,8 @@ public:
 
         // Check upgrade mode status ... (0xF1)
         ret = checkUpgradeModeStatus(write_buffer, read_buffer);
-        cout << "Status: " << std::hex << static_cast<int>(read_buffer[0])
-             << endl;
+        VERBOSE << "Status: " << std::hex << static_cast<int>(read_buffer[0])
+                << endl;
         if ((read_buffer[0] & TRANS_ERR) == TRANS_ERR) {
           cerr << __func__ << ":" << __LINE__ << "-"
                << "#6 Programming 'Transmit' status failed: " << TRANS_ERR
@@ -562,7 +564,8 @@ public:
 
       /* Progressing */
       page_index = page_index + 1;
-      cout << "Upgrade Progress... " << (page_index * 99 / Page_Count) << endl;
+      cout << "Upgrade Progress... " << std::dec
+           << (page_index * 99 / Page_Count) << endl;
 
     } // End of for(i = 0; i < Page_Count; i++)
 
@@ -572,7 +575,7 @@ public:
 
     /* 8. Transmit CRC16 (Operation: 0xF4 0x03(byte count) MCU_ID CRC16_LO
      * CRC16_HI PEC) */
-    cout << "#8 Write CRC16..." << endl;
+    VERBOSE << "#8 Write CRC16..." << endl;
     memset(write_buffer, 0x00, sizeof(write_buffer));
     memset(read_buffer, 0x00, sizeof(read_buffer));
     write_buffer[0] = REG_TRANSMIT_CRC;
@@ -580,8 +583,8 @@ public:
     write_buffer[2] = mcuID;
     write_buffer[3] = static_cast<uint8_t>(CRC16_Data & 0xFF);
     write_buffer[4] = static_cast<uint8_t>((CRC16_Data >> 8) & 0xFF);
-    cout << "Re-Check FW Image CRC16 Checksum before transmit: " << CRC16_Data
-         << endl;
+    VERBOSE << "Re-Check FW Image CRC16 Checksum before transmit: "
+            << CRC16_Data << endl;
     VERBOSE << "write_buffer[3]: " << std::hex
             << static_cast<int>(write_buffer[3]) << endl;
     VERBOSE << "write_buffer[4]: " << std::hex
@@ -607,21 +610,22 @@ public:
     ret = checkUpgradeModeStatus(write_buffer, read_buffer);
     if (ret)
       goto exit;
-    cout << "Status: " << std::hex << static_cast<int>(read_buffer[0]) << endl;
+    VERBOSE << "Status: " << std::hex << static_cast<int>(read_buffer[0])
+            << endl;
     if ((read_buffer[0] & bootStat) != bootStat) // Bit2=0? Yes!
     {
       if (mcuID != MCU_ID_COM) {
         /* Turn on the PSU output... (Operation: 0x01 0x80) */
         ret = enableDeviceOutput(write_buffer, read_buffer);
       }
-      cout << "FW Upgrade Complete for slave " << slave << endl;
+      VERBOSE << "FW Upgrade Complete for slave " << slave << endl;
     } else {
       ret = static_cast<int>(ErrorStatus::ERROR_UPG_FAIL);
       cerr << __func__ << ":" << __LINE__ << "-"
            << statusToString(ErrorStatus::ERROR_UPG_FAIL) << endl;
       goto exit;
     }
-    cout << "#0 Check FW Version... after upgrade command " << endl;
+    VERBOSE << "#0 Check FW Version... after upgrade command " << endl;
     I2c::calculate_PEC(write_buffer, slave, 14);
     ret = fwversion();
     if (ret)
@@ -654,10 +658,10 @@ public:
     cout << "Version:Comm Major Rev " << std::hex
          << static_cast<int>(read_buffer[1]) << " Minor Rev " << std::hex
          << static_cast<int>(read_buffer[2]) << endl;
-    cout << "Version:Prim Major Rev " << std::hex
+    cout << "Version:Sec Major Rev " << std::hex
          << static_cast<int>(read_buffer[3]) << " Minor Rev " << std::hex
          << static_cast<int>(read_buffer[4]) << endl;
-    cout << "Version:Sec  Major Rev " << std::hex
+    cout << "Version:Prim  Major Rev " << std::hex
          << static_cast<int>(read_buffer[5]) << " Minor Rev " << std::hex
          << static_cast<int>(read_buffer[6]) << endl;
 
