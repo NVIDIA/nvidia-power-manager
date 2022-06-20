@@ -1,0 +1,14 @@
+[Unit]
+Description=PSU Montior service
+Requires=nvidia-power-supply.service
+After=nvidia-power-supply.service
+
+[Service]
+Type=dbus
+Restart=always
+ExecStartPre=/bin/sleep 30
+ExecStart=/usr/bin/nvidia-psu-monitor
+BusName=com.Nvidia.PsuEvent
+
+[Install]
+WantedBy=multi-user.target
