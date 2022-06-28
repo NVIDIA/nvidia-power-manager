@@ -1,6 +1,6 @@
 project(
     'nvidia-power-manager',
-    'cpp',
+    ['cpp','c'],
     version: '0.1', meson_version: '>=0.57.0',
     default_options: [
           'warning_level=3',
@@ -20,6 +20,13 @@ executable(
     'psufwupgrade',
     'psu_utility/main.cpp',
     cpp_args : '-DSTANDALONE_UTILITY',
+    install: true,
+    install_dir: get_option('bindir')
+)
+
+executable(
+    'cpldupdate',
+    'cpld_utility/updateFPGA.c',
     install: true,
     install_dir: get_option('bindir')
 )
