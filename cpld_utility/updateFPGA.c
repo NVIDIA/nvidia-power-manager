@@ -216,7 +216,7 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
 
   sprintf(i2c_device, "/dev/i2c-%d", bus);
   if (debug_h) {
-    printf("[DEBUG]%s, %s\n", __FUNCTION__, i2c_device);
+    printf("[DEBUG]%s, %s\n", __func__, i2c_device);
   }
   fd = open(i2c_device, O_RDWR | O_NONBLOCK);
   if (fd < 0) {
