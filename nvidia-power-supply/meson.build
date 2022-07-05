@@ -20,7 +20,7 @@ fmt = dependency('fmt')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 phosphor_logging = dependency('phosphor-logging')
 
-install_data('psui2ccmd.sh', install_dir : get_option('bindir'))
+install_data('psui2ccmd.sh', install_dir : get_option('bindir'), install_mode : 'rwxr-xr-x')
 
 build_tests = get_option('tests')
 

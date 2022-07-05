@@ -1,5 +1,6 @@
 
 #include "i2c.hpp"
+#include "util.hpp"
 #include <dlfcn.h>
 #include <fcntl.h>
 #include <iostream>
@@ -162,6 +163,7 @@ PSUSlave_T slave_hdlr[] = {
 unsigned char FW_ID[11] = {0x32, 0x39, 0x30, 0x30, 0x31, 0x30,
                            0x36, 0x31, 0x44, 0x43, 0x45};
 
+std::string psuId;
 
 MCUPart_T MCU_hdlr[] = {
     // {SectionFlash, FwSize, MCU_ID, BYTE_PER_PAGE, BYTE_PER_PACKET, BOOT_STA,
@@ -186,7 +188,7 @@ public:
     int ret = 0;
     // 3. Unlock upgrade command with password... (Operation: 0xF0 0x0C MCU_ID
     // [ECD16010081]-ASCII PEC)  => retry 5
-    printf("#3 Unlock Upgrade...\n");
+    VERBOSE << "#3 Unlock Upgrade..." << endl;
     memset(write_buffer, 0x00, MAX_BUFFER_SIZE);
     memset(read_buffer, 0x00, MAX_BUFFER_SIZE);
     write_buffer[0] = REG_FIRMWARE_UNLOCK;
@@ -304,6 +306,8 @@ public:
     int blockIndex;                              //
     int Flag_BreakFlag = 0,
         Flag_SetUnlockBootflag = 0; // Use to exit the 2 for loop
+    std::map<std::string, std::string> addData;
+    Level level = Level::Informational;
     section_flash = section;
     for (int i = 0; i < MCU_MAX_NUM; i++) {
 
@@ -375,7 +379,7 @@ public:
     usleep(DELAY_500_MS); // usleep = micro seconds
     // 5. Check/Read upgrade mode status (optional)... (0xF1)
     // 		!= upgrade mode => continue
-    printf("#5 Check Upgrade Mode Status...\n");
+    VERBOSE << "#5 Check Upgrade Mode Status..." << endl;
     ret = checkUpgradeModeStatus(write_buffer, read_buffer);
     if (ret)
       goto exit;
@@ -441,6 +445,11 @@ public:
     usleep(DELAY_500_MS); // usleep = micro seconds
 
   JumpToTransmit: // Jump to here after Skip Turn OFF, Unlock and Set Bootflag
+    addData["REDFISH_MESSAGE_ID"] = transferringToComponent;
+    addData["REDFISH_MESSAGE_ARGS"] = (imageFilename + "," + "PSU" + psuId);
+    addData["namespace"] = "FWUpdate";
+    level = Level::Informational;
+    createLog(transferringToComponent, addData, level);
 
     bytePerBlock = static_cast<int>((bytePerPage / bytePerPacket)); // 256 / 16
     Page_Count = (static_cast<uint32_t>(st.st_size) / bytePerPage);
@@ -475,7 +484,7 @@ public:
         if (Flag_RepeatTrans < 10) {
           ret = I2c::transfer(fd, PSU_WRITE, slave, write_buffer, 0, 22, 0);
           if (ret)
-            goto exit;
+            goto transferFail;
 
           // Delay 1
           usleep(delay1 * DELAY_MS);
@@ -522,8 +531,10 @@ public:
     RepeatWrite:
       if (Flag_RepeatWrite < 10) {
         ret = I2c::transfer(fd, PSU_WRITE, slave, write_buffer, 0, 6, 0);
-        if (ret)
-          goto exit;
+        if (ret) {
+          Flag_RepeatWrite++;
+          goto RepeatWrite;
+        }
 
         if (MCU_ID_PRIM == mcuID) {
           if ((0 == i) || (0 == (i % 8))) {
@@ -557,7 +568,8 @@ public:
       } else {
         // Break out the "Page count" loop
         Flag_BreakFlag = 1;
-        printf("Fail to Transmission Page Data \n");
+        cerr << __func__ << ":" << __LINE__ << "-"
+             << "Fail to Transmission Page Data" << endl;
         ret = static_cast<int>(ErrorStatus::ERROR_TRANS_PAGE);
         break;
       }
@@ -628,8 +640,14 @@ public:
     VERBOSE << "#0 Check FW Version... after upgrade command " << endl;
     I2c::calculate_PEC(write_buffer, slave, 14);
     ret = fwversion();
-    if (ret)
-      goto exit;
+    goto exit;
+
+  transferFail:
+    addData["REDFISH_MESSAGE_ID"] = transferFailed;
+    addData["REDFISH_MESSAGE_ARGS"] = (imageFilename + "," + "PSU" + psuId);
+    addData["namespace"] = "FWUpdate";
+    level = Level::Critical;
+    createLog(transferFailed, addData, level);
 
   exit:
     if (fw_buf) {

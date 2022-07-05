@@ -156,6 +156,19 @@ int componentSendCommand(string cmd, int bus, int device_slaveaddr,
                          fs::path tarImageFilename) {
   int fd = -1, i = 0, retry = 0, ret = 0;
 #endif
+
+  nlohmann::json fruJson =
+      loadJSONFile("/usr/share/nvidia-power-manager/psu_config.json");
+  if (fruJson == nullptr) {
+    log<level::ERR>("InternalFailure when parsing the JSON file");
+    return -(static_cast<int>(ErrorStatus::ERROR_UNKNOW));
+  }
+  for (const auto &fru : fruJson.at("PowerSupplies")) {
+    if (fru.at("I2cBus") == bus &&
+        fru.at("I2cSlaveAddress") == device_slaveaddr) {
+      psuId = fru.at("Index");
+    }
+  }
   fd = I2c::openBus(bus);
   if (fd < 0) {
     cout << "Error opening i2c file: " << strerror(errno) << endl;
@@ -228,14 +241,50 @@ int componentSendCommand(string cmd, int bus, int device_slaveaddr,
       retry = 0;
       do {
         VERBOSE << "starting fwupgrade process " << endl;
+        std::map<std::string, std::string> addData;
+        addData["REDFISH_MESSAGE_ID"] = trargetDetermined;
+        addData["REDFISH_MESSAGE_ARGS"] =
+            ("PSU" + psuId + "," + image_entry.second.string());
+        // use separate container for fwupdate message registry
+        addData["namespace"] = "FWUpdate";
+        Level level = Level::Informational;
+        createLog(trargetDetermined, addData, level);
         ret = device.fwupdate(image_entry.second.c_str(), image_entry.first);
         if (ret == 0) {
+          addData["REDFISH_MESSAGE_ID"] = updateSuccessful;
+          addData["REDFISH_MESSAGE_ARGS"] =
+              ("PSU" + psuId + "," + image_entry.second.string());
+          // use separate container for fwupdate message registry
+          addData["namespace"] = "FWUpdate";
+          level = Level::Informational;
+          createLog(updateSuccessful, addData, level);
+          addData["REDFISH_MESSAGE_ID"] = awaitToActivate;
+          addData["REDFISH_MESSAGE_ARGS"] =
+              (image_entry.second.string() + "," + "PSU" + psuId);
+          // use separate container for fwupdate message registry
+          addData["namespace"] = "FWUpdate";
+          level = Level::Informational;
+          createLog(awaitToActivate, addData, level);
           break;
         } else if (retry > MAX_RETRY) {
           VERBOSE << "retry= " << retry << endl;
+          addData["REDFISH_MESSAGE_ID"] = applyFailed;
+          addData["REDFISH_MESSAGE_ARGS"] =
+              (image_entry.second.string() + "," + "PSU" + psuId);
+          // use separate container for fwupdate message registry
+          addData["namespace"] = "FWUpdate";
+          level = Level::Critical;
+          createLog(applyFailed, addData, level);
           ret = -(static_cast<int>(ErrorStatus::ERROR_UPG_FAIL));
           break;
         } else {
+          addData["REDFISH_MESSAGE_ID"] = applyFailed;
+          addData["REDFISH_MESSAGE_ARGS"] =
+              (image_entry.second.string() + "," + "PSU" + psuId);
+          // use separate container for fwupdate message registry
+          addData["namespace"] = "FWUpdate";
+          level = Level::Critical;
+          createLog(applyFailed, addData, level);
 
           retry++;
         }
