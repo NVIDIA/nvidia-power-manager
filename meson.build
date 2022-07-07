@@ -24,13 +24,8 @@ executable(
     install_dir: get_option('bindir')
 )
 
-executable(
-    'cpldupdate',
-    'cpld_utility/updateFPGA.c',
-    install: true,
-    install_dir: get_option('bindir')
-)
 
 subdir('nvidia-power-supply')
 subdir('nvidia-cpld')
 subdir('nvidia-psu-monitor')
+subdir('cpld_utility')
