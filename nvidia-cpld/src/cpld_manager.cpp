@@ -34,6 +34,8 @@ CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
             std::string id = fru.at("Index");
             std::string busN = fru.at("Bus");
             std::string address = fru.at("Address");
+            std::string model = fru.at("Model");
+            std::string manufacturer = fru.at("Manufacturer");
             std::string invpath = baseinvInvPath + id;
 
             uint8_t busId = std::stoi(busN);
@@ -47,8 +49,8 @@ CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
             {
                 continue;
             }
-            auto inv =
-                std::make_unique<Cpld>(bus, invpath, busId, devAddr, id);
+            auto inv = std::make_unique<Cpld>(bus, invpath, busId, devAddr, id,
+                                              model, manufacturer);
             cpldInvs.emplace_back(std::move(inv));
         }
         catch (const std::exception& e)

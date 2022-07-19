@@ -52,7 +52,8 @@ class Cpld : public CpldInherit, public Util
     ~Cpld() = default;
 
     Cpld(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
-        uint8_t address, const std::string& name) :
+         uint8_t address, const std::string& name, const std::string& modelN,
+         const std::string& manufacturerN) :
         CpldInherit(bus, (objPath).c_str(), CpldInherit::action::defer_emit),
         bus(bus)
     {
@@ -60,9 +61,9 @@ class Cpld : public CpldInherit, public Util
         b = busN;
         d = address;
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::
-            manufacturer(getManufacturer());
+            manufacturer(manufacturerN);
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::
-            model(getModel());
+            model(modelN);
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::
             partNumber(getPartNumber());
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::

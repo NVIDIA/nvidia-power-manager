@@ -58,7 +58,7 @@ TEST(CpldTest, CpldTestDbus)
     sdbusMockExpectPropertyChanged(sdbus_mock, path, "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional");
     sdbusMockExpectPropertyChanged(sdbus_mock, path, "xyz.openbmc_project.Inventory.Item.Chassis", "Type");
 
-    nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name");
+    nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name", "", "");
 }
 
 /* test JSON load */
