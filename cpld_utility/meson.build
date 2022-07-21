@@ -1,4 +1,4 @@
-executable('cpldupdate', 'main.c','libcpld.c','libi2c.c',
+executable('cpldupdate', 'main.c','libcpld.c','libi2c.c','updateCPLDFw_dbus_log_event.c',
                dependencies:
                             [
                               sdbusplus,
@@ -9,4 +9,4 @@ executable('cpldupdate', 'main.c','libcpld.c','libi2c.c',
                             ],
                install : true,
                install_dir : get_option('bindir'))
-install_headers('libcpld.h','libi2c.h')
+install_headers('libcpld.h','libi2c.h','updateCPLDFw_dbus_log_event.h')

@@ -1,4 +1,5 @@
 #include "libi2c.h"
+#include "updateCPLDFw_dbus_log_event.h"
 
 int wait_until_not_busy(int fd, unsigned int delay) {
   unsigned char write_buffer[8];
@@ -34,7 +35,7 @@ int wait_until_not_busy(int fd, unsigned int delay) {
 }
 
 int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
-                               int *flashing_progress) {
+                               int *flashing_progress, char *id) {
   unsigned char bytes[MB_PAGE_SIZE_BYTES] = {0};
   unsigned char *fw_buf = NULL;
   char i2c_device[MAX_NAME_SIZE] = {0};
@@ -64,11 +65,15 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
     ret = -ERROR_OPEN_I2C_DEVICE;
     goto exit;
   }
+  emitLogMessage("TargetDetermined", id, versionStr,
+                 "xyz.openbmc_project.Logging.Entry.Level.Informational", NULL);
   // Read F/W data first!
   fw_file = open(image, O_RDONLY);
   if (fw_file < 0) {
     printf("Error opening file: %s\n", strerror(errno));
     ret = -ERROR_OPEN_FIRMWARE;
+    emitLogMessage("VerificationFailed", id, versionStr,
+                   "xyz.openbmc_project.Logging.Entry.Level.Critical", NULL);
     goto exit;
   }
   stat(image, &st);
@@ -76,6 +81,8 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
   if ((st.st_size <= 0) || (st.st_size % MB_PAGE_SIZE_BYTES)) {
     ret = -ERROR_WRONG_FIRMWARE;
     printf("Error size file:%s %d\n", image, (int)st.st_size);
+    emitLogMessage("VerificationFailed", id, versionStr,
+                   "xyz.openbmc_project.Logging.Entry.Level.Critical", NULL);
     goto exit;
   }
 
@@ -314,6 +321,12 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
     goto exit;
   if (ret == 0) {
     printf("\nUpdate successfully!!\n");
+    emitLogMessage("UpdateSuccessful", id, versionStr,
+                   "xyz.openbmc_project.Logging.Entry.Level.Informational",
+                   NULL);
+    emitLogMessage("AwaitToActivate", versionStr, id,
+                   "xyz.openbmc_project.Logging.Entry.Level.Informational",
+                   "Perform AC Power Cycle to activate programmed Firmware");
   }
 
   // Get MB_FPGA version
@@ -326,7 +339,8 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
   if (ret)
     goto exit;
   if (debug_h) {
-    printf("Final FPGA version: %02x %02x\n", read_buffer[0], read_buffer[1]);
+    printf("Final MB_FPGA version: %02x %02x\n", read_buffer[0],
+           read_buffer[1]);
   }
 
   if (ENABLE_MBRECONFIG) {
@@ -396,7 +410,7 @@ exit:
 }
 
 int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
-                                int *flashing_progress) {
+                                int *flashing_progress, char *id) {
   unsigned char bytes[MID_PAGE_SIZE_BYTES] = {0};
   unsigned char *fw_buf = NULL;
   char i2c_device[MAX_NAME_SIZE] = {0};
@@ -426,11 +440,15 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
     ret = -ERROR_OPEN_I2C_DEVICE;
     goto exit;
   }
+  emitLogMessage("TargetDetermined", id, versionStr,
+                 "xyz.openbmc_project.Logging.Entry.Level.Informational", NULL);
   // Read F/W data first!
   fw_file = open(image, O_RDONLY);
   if (fw_file < 0) {
     printf("Error opening file: %s\n", strerror(errno));
     ret = -ERROR_OPEN_FIRMWARE;
+    emitLogMessage("VerificationFailed", id, versionStr,
+                   "xyz.openbmc_project.Logging.Entry.Level.Critical", NULL);
     goto exit;
   }
   stat(image, &st);
@@ -438,6 +456,8 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
   if ((st.st_size <= 0) || (st.st_size % MID_PAGE_SIZE_BYTES)) {
     ret = -ERROR_WRONG_FIRMWARE;
     printf("Error size file:%s %d\n", image, (int)st.st_size);
+    emitLogMessage("VerificationFailed", id, versionStr,
+                   "xyz.openbmc_project.Logging.Entry.Level.Critical", NULL);
     goto exit;
   }
 
@@ -676,6 +696,12 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
     goto exit;
   if (ret == 0) {
     printf("\nUpdate successfully!!\n");
+    emitLogMessage("UpdateSuccessful", id, versionStr,
+                   "xyz.openbmc_project.Logging.Entry.Level.Informational",
+                   NULL);
+    emitLogMessage("AwaitToActivate", versionStr, id,
+                   "xyz.openbmc_project.Logging.Entry.Level.Informational",
+                   "Perform AC Power Cycle to activate programmed Firmware");
   }
 
   // Get MID_FPGA version
@@ -687,7 +713,8 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
   if (ret)
     goto exit;
   if (debug_h) {
-    printf("Final FPGA version: %02x %02x\n", read_buffer[0], read_buffer[1]);
+    printf("Final MID_FPGA version: %02x %02x\n", read_buffer[0],
+           read_buffer[1]);
   }
 
   if (ENABLE_MIDRECONFIG) {

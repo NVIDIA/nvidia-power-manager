@@ -2,6 +2,7 @@
 
 int debug_l;
 int debug_h;
+char *versionStr = NULL;
 
 int checkDigit(char *str) {
   unsigned int i;
@@ -17,7 +18,7 @@ int checkDigit(char *str) {
 
 void show_usage(char *exec) {
   printf("\n\nUsage: %s <i2c bus number> <image select> <firmware filename>  "
-         "<platform selection>  "
+         "<CPLD Device selection>  "
          "<verbose>\n",
          exec);
   printf("\n        i2c bus number: must be digits [1-2]\n");
@@ -40,6 +41,7 @@ int main(int argc, char *argv[]) {
   int image_sel = atoi(argv[2]);
   char *image = argv[3];
   int cpldDeviceSelection = atoi(argv[4]);
+  char *id;
   int flashing_progress;
   if (checkDigit(argv[1])) {
     ret = -ERROR_INPUT_I2C_ARGUMENT;
@@ -48,19 +50,28 @@ int main(int argc, char *argv[]) {
   }
 
   if (argc > 5) {
-    if (strcmp(argv[5], "-v") == 0)
+    versionStr = argv[5];
+  } else {
+    versionStr = DEFAULT_VERSION;
+  }
+
+  if (argc > 6) {
+    if (strcmp(argv[6], "-v") == 0)
       debug_h = 1;
-    else if (strcmp(argv[5], "-vv") == 0) {
+    else if (strcmp(argv[6], "-vv") == 0) {
       debug_l = 1;
       debug_h = 1;
     }
   }
-  if (cpldDeviceSelection == 1)
-    ret = flash_remote_mb_fpga_image(bus, image_sel, image, &flashing_progress);
-  else if (cpldDeviceSelection == 2)
-    ret =
-        flash_remote_mid_fpga_image(bus, image_sel, image, &flashing_progress);
-  else {
+  if (cpldDeviceSelection == 1) {
+    id = "cpld0";
+    ret = flash_remote_mb_fpga_image(bus, image_sel, image, &flashing_progress,
+                                     id);
+  } else if (cpldDeviceSelection == 2) {
+    id = "cpld1";
+    ret = flash_remote_mid_fpga_image(bus, image_sel, image, &flashing_progress,
+                                      id);
+  } else {
     ret = -ERROR_WRONG_CPLD_DEVICE_SELECTION;
     show_usage(argv[0]);
     return ret;

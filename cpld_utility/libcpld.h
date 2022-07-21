@@ -18,9 +18,11 @@
 #define STATUS_BUSY 0x3
 #define TRY_TIMES 5
 #define DELAY_1000MS 1000
+#define DEFAULT_VERSION "Unknown"
 
 extern int debug_h;
 extern int debug_l;
+extern char *versionStr;
 
 // MIDPLANE
 #define MID_I2C_ADDR 0xD4 // MID FPGA 8 bit update addr
@@ -117,7 +119,7 @@ int checkDigit(char *str);
  *
  */
 int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
-                                int *flashing_progress);
+                                int *flashing_progress, char *id);
 
 /*
  * flash_remote_md_fpga_image()
@@ -131,4 +133,4 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
  *
  */
 int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
-                               int *flashing_progress);
+                               int *flashing_progress, char *id);
