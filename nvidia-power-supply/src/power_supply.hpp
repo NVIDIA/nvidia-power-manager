@@ -66,7 +66,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
     PowerSupply(sdbusplus::bus::bus& bus, const std::string& objPath,
                 const std::string& cmdUtilityName, const std::string& name,
                 const std::string& assoc) :
-        PowerSupplyInherit(bus, (objPath).c_str(), true),
+        PowerSupplyInherit(bus, (objPath).c_str(), PowerSupplyInherit::action::defer_emit),
         PSShellIntf(name, cmdUtilityName),
         bus(bus), inventoryPath(objPath)
     {
