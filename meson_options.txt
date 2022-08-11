@@ -1,1 +1,2 @@
+option('dragon_chassis', type: 'feature', value: 'disabled', description: 'Add Dragon PSU update into the build')
 option('tests', type: 'feature', value: 'enabled', description: 'Build tests.',)

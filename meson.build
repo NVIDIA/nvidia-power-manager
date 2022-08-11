@@ -9,9 +9,7 @@ project(
         ]
 )
 
-
-
-
+incdir = include_directories('include')
 subdir('psu_utility')
 subdir('nvidia-power-supply')
 subdir('nvidia-cpld')

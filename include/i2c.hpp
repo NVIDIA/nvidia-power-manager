@@ -11,8 +11,9 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <iostream>
 using namespace std;
-int verbose = 0;
+static int verbose = 0;
 
 #define VERBOSE                                                                \
   if (verbose)                                                                 \
@@ -89,7 +90,8 @@ public:
     for (int i = 0; i < write_count && verbose; i++) {
       cout << std::hex << std::hex << static_cast<int>(write_data[i]) << " ";
     }
-    cout << endl;
+    if (verbose)
+      cout << endl;
 
     if (isRead) {
       VERBOSE << "R[0x" << std::hex << slave << "]" << endl;
@@ -119,7 +121,8 @@ public:
     int ioError = ioctl(busFd, I2C_RDWR, &msgset);
 
     if (ioError < 0) {
-      std::fprintf(stderr, "I2c::transfer I2C_RDWR ioError=%d?\n", ioError);
+      std::fprintf(stderr, "I2c::transfer I2C_RDWR ioError=%d errno=%s\n",
+                   ioError, strerror(errno));
       return static_cast<int>(
           Status::ERROR_IOCTL_I2C_RDWR_FAILURE); // I2C_RDWR I/O error
     }
