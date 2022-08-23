@@ -1,5 +1,5 @@
 systemd = dependency('systemd')
-servicedir = systemd.get_pkgconfig_variable('systemdsystemunitdir')
+servicedir = systemd.get_variable(pkgconfig : 'systemdsystemunitdir')
 
 cdata = configuration_data()
 cdata.set_quoted(

@@ -4,7 +4,7 @@ cpp = meson.get_compiler('cpp')
 sdbusplus = dependency('sdbusplus')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 systemd = dependency('systemd')
-servicedir = systemd.get_pkgconfig_variable('systemdsystemunitdir')
+servicedir = systemd.get_variable(pkgconfig : 'systemdsystemunitdir')
 i2c = meson.get_compiler('cpp').find_library('i2c')
 
 cdata = configuration_data()
