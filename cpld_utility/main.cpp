@@ -1,8 +1,10 @@
+#include "dragonCpld.hpp"
 #include "libcpld.h"
 
 int debug_l;
 int debug_h;
 char *versionStr = NULL;
+char *configFile = NULL;
 
 int checkDigit(char *str) {
   unsigned int i;
@@ -61,6 +63,8 @@ int main(int argc, char *argv[]) {
     else if (strcmp(argv[6], "-vv") == 0) {
       debug_l = 1;
       debug_h = 1;
+    } else {
+      configFile = argv[6];
     }
   }
   if (cpldDeviceSelection == 1) {
@@ -68,9 +72,15 @@ int main(int argc, char *argv[]) {
     ret = flash_remote_mb_fpga_image(bus, image_sel, image, &flashing_progress,
                                      id);
   } else if (cpldDeviceSelection == 2) {
-    id = "cpld1";
-    ret = flash_remote_mid_fpga_image(bus, image_sel, image, &flashing_progress,
-                                      id);
+    if (argc > 6) {
+      int ret;
+      DragonCpld dp(bus, true, image, configFile);
+      ret = dp.fwUpdate();
+    } else {
+      id = "cpld1";
+      ret = flash_remote_mid_fpga_image(bus, image_sel, image,
+                                        &flashing_progress, id);
+    }
   } else {
     ret = -ERROR_WRONG_CPLD_DEVICE_SELECTION;
     show_usage(argv[0]);

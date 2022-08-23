@@ -79,6 +79,57 @@ public:
     case static_cast<int>(UpdateError::ERROR_READ_MODEL):
       std::cerr << "UpdateError::ERROR_READ_MODEL" << std::endl;
       break;
+    case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_BUSY):
+      std::cerr << "UpdateError::ERROR_SEND_IMAGE_BUSY" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE):
+      std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_BUSY):
+      std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE_BUSY" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_CHECK):
+      std::cerr << "UpdateError::ERROR_SEND_IMAGE_CHECK" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG1):
+      std::cerr << "UpdateError::ERROR_ACTIVATE_CPLD_REG1" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG2):
+      std::cerr << "UpdateError::ERROR_ACTIVATE_CPLD_REG2" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_CPLD_REFRESH_NOT_FOUND):
+      std::cerr << "UpdateError::ERROR_CPLD_REFRESH_NOT_FOUND" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_CPLD_REFRESH_FAILED):
+      std::cerr << "UpdateError::ERROR_CPLD_REFRESH_FAILED" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED):
+      std::cerr << "UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED"
+                << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_INTERNAL_CPLD_REFRESH_FAILED):
+      std::cerr << "UpdateError::ERROR_INTERNAL_CPLD_REFRESH_FAILED"
+                << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH):
+      std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT):
+      std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_CLEANUP_ERASE):
+      std::cerr << "UpdateError::ERROR_CLEANUP_ERASE" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_CONFIG_NOT_FOUND):
+      std::cerr << "UpdateError::ERROR_CONFIG_NOT_FOUND" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_CONFIG_FORMAT):
+      std::cerr << "UpdateError::ERROR_CONFIG_FORMAT" << std::endl;
+      break;
+    case static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED):
+      std::cerr << "UpdateError::ERROR_CONFIG_PARSE_FAILED" << std::endl;
+      break;
+
     default:
       std::cerr << "Invalid error code" << std::endl;
       break;
@@ -107,6 +158,22 @@ public:
     ERROR_ARB_NOT_FOUND = 19,
     ERROR_WRONG_MODEL = 20,
     ERROR_READ_MODEL = 21,
+    ERROR_SEND_IMAGE_BUSY = 22,
+    ERROR_SEND_IMAGE_DONE = 23,
+    ERROR_SEND_IMAGE_DONE_BUSY = 24,
+    ERROR_SEND_IMAGE_DONE_CHECK = 25,
+    ERROR_ACTIVATE_CPLD_REG1 = 26,
+    ERROR_ACTIVATE_CPLD_REG2 = 27,
+    ERROR_CPLD_REFRESH_NOT_FOUND = 28,
+    ERROR_CPLD_REFRESH_FAILED = 29,
+    ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED = 30,
+    ERROR_INTERNAL_CPLD_REFRESH_FAILED = 31,
+    ERROR_READ_CPLD_REFRESH = 32,
+    ERROR_READ_CPLD_REFRESH_TIMEOUT = 33,
+    ERROR_CLEANUP_ERASE = 34,
+    ERROR_CONFIG_NOT_FOUND = 35,
+    ERROR_CONFIG_FORMAT = 36,
+    ERROR_CONFIG_PARSE_FAILED = 37,
   };
 
 protected:
