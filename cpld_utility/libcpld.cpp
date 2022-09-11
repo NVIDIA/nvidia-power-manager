@@ -51,6 +51,14 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
   int ret = 0;
   int pages;
   unsigned int i;
+  const char* target_deter = "TargetDetermined";
+  const char* ver_failed = "VerificationFailed";
+  const char* update_succ = "UpdateSuccessful";
+  const char* await_act = "AwaitToAcivate";
+  const char* perf_power = "Perform AC Power Cycle to activate programmed Firmware";
+  const char* sev_info = "xyz.openbmc_project.Logging.Entry.Level.Informational";
+  const char* sev_crit = "xyz.openbmc_project.Logging.Entry.Level.Critical";
+  ssize_t read_ret;
 
   sprintf(i2c_device, "/dev/i2c-%d", bus);
   if (debug_h) {
@@ -65,15 +73,13 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
     ret = -ERROR_OPEN_I2C_DEVICE;
     goto exit;
   }
-  emitLogMessage("TargetDetermined", id, versionStr,
-                 "xyz.openbmc_project.Logging.Entry.Level.Informational", NULL);
+  emitLogMessage(target_deter, id, versionStr, sev_info, NULL);
   // Read F/W data first!
   fw_file = open(image, O_RDONLY);
   if (fw_file < 0) {
     printf("Error opening file: %s\n", strerror(errno));
     ret = -ERROR_OPEN_FIRMWARE;
-    emitLogMessage("VerificationFailed", id, versionStr,
-                   "xyz.openbmc_project.Logging.Entry.Level.Critical", NULL);
+    emitLogMessage(ver_failed, id, versionStr, sev_crit, NULL);
     goto exit;
   }
   stat(image, &st);
@@ -81,8 +87,7 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
   if ((st.st_size <= 0) || (st.st_size % MB_PAGE_SIZE_BYTES)) {
     ret = -ERROR_WRONG_FIRMWARE;
     printf("Error size file:%s %d\n", image, (int)st.st_size);
-    emitLogMessage("VerificationFailed", id, versionStr,
-                   "xyz.openbmc_project.Logging.Entry.Level.Critical", NULL);
+    emitLogMessage(target_deter, id, versionStr, sev_info, NULL);
     goto exit;
   }
 
@@ -97,8 +102,13 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
     ret = -ERROR_MALLOC_FAILURE;
     goto exit;
   }
-  read(fw_file, fw_buf, st.st_size);
+  read_ret = read(fw_file, fw_buf, st.st_size);
   close(fw_file);
+  if (read_ret != st.st_size)
+  {
+    ret = -ERROR_FILE_READ;
+    goto exit;
+  }
   printf("\nFirmware data loaded %d pages.......\n", pages);
 
   // Get MB_FPGA version
@@ -321,12 +331,8 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
     goto exit;
   if (ret == 0) {
     printf("\nUpdate successfully!!\n");
-    emitLogMessage("UpdateSuccessful", id, versionStr,
-                   "xyz.openbmc_project.Logging.Entry.Level.Informational",
-                   NULL);
-    emitLogMessage("AwaitToActivate", versionStr, id,
-                   "xyz.openbmc_project.Logging.Entry.Level.Informational",
-                   "Perform AC Power Cycle to activate programmed Firmware");
+    emitLogMessage(update_succ, id, versionStr, sev_info, NULL);
+    emitLogMessage(await_act, versionStr, id, sev_info, perf_power);
   }
 
   // Get MB_FPGA version
@@ -426,6 +432,7 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
   int ret = 0;
   int pages;
   unsigned int i;
+  ssize_t read_ret;
 
   sprintf(i2c_device, "/dev/i2c-%d", bus);
   if (debug_h) {
@@ -472,8 +479,14 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
     ret = -ERROR_MALLOC_FAILURE;
     goto exit;
   }
-  read(fw_file, fw_buf, st.st_size);
+  read_ret = read(fw_file, fw_buf, st.st_size);
   close(fw_file);
+  if (read_ret != st.st_size)
+  {
+    ret = -ERROR_FILE_READ;
+    goto exit;
+  }
+
   printf("\nFirmware data loaded %d pages.......\n", pages);
 
   // Get MID_FPGA version

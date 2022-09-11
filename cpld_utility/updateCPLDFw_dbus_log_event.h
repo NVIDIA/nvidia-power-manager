@@ -11,5 +11,5 @@
 #define LOG_CREATE_SIGNATURE "ssa{ss}"
 
 /* no return, we will call and fail silently if busctl isn't present */
-void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
-                    char *resolution);
+void emitLogMessage(const char *message, const char *arg0, const char *arg1, const char *severity,
+                    const char *resolution);

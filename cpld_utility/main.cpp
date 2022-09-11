@@ -1,9 +1,10 @@
 #include "dragonCpld.hpp"
 #include "libcpld.h"
 
+const char* DEFAULT_VERSION = "Unknown";
 int debug_l;
 int debug_h;
-char *versionStr = NULL;
+const char *versionStr;
 char *configFile = NULL;
 
 int checkDigit(char *str) {
@@ -43,8 +44,10 @@ int main(int argc, char *argv[]) {
   int image_sel = atoi(argv[2]);
   char *image = argv[3];
   int cpldDeviceSelection = atoi(argv[4]);
-  char *id;
   int flashing_progress;
+  char cpld0[] = "cpld0";
+  char cpld1[] = "cpld1";
+
   if (checkDigit(argv[1])) {
     ret = -ERROR_INPUT_I2C_ARGUMENT;
     show_usage(argv[0]);
@@ -68,18 +71,15 @@ int main(int argc, char *argv[]) {
     }
   }
   if (cpldDeviceSelection == 1) {
-    id = "cpld0";
     ret = flash_remote_mb_fpga_image(bus, image_sel, image, &flashing_progress,
-                                     id);
+                                     cpld0);
   } else if (cpldDeviceSelection == 2) {
     if (argc > 6) {
-      int ret;
       DragonCpld dp(bus, true, image, configFile);
       ret = dp.fwUpdate();
     } else {
-      id = "cpld1";
       ret = flash_remote_mid_fpga_image(bus, image_sel, image,
-                                        &flashing_progress, id);
+                                        &flashing_progress, cpld1);
     }
   } else {
     ret = -ERROR_WRONG_CPLD_DEVICE_SELECTION;

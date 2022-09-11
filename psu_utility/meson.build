@@ -14,6 +14,7 @@ if get_option('dragon_chassis').enabled()
 	executable(
 	    'psufwupgrade',
 		dragonSources,
+        dependencies: phosphor_logging,
         include_directories : incdir,
 	    install: true,
 	    install_dir: get_option('bindir')
@@ -23,6 +24,7 @@ else
     'psufwupgrade',
     'main.cpp',
     cpp_args : '-DSTANDALONE_UTILITY',
+    dependencies: phosphor_logging,
     include_directories : incdir,
     install: true,
     install_dir: get_option('bindir')

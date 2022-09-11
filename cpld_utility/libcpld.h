@@ -18,11 +18,10 @@
 #define STATUS_BUSY 0x3
 #define TRY_TIMES 5
 #define DELAY_1000MS 1000
-#define DEFAULT_VERSION "Unknown"
 
 extern int debug_h;
 extern int debug_l;
-extern char *versionStr;
+extern const char *versionStr;
 
 // MIDPLANE
 #define MID_I2C_ADDR 0xD4 // MID FPGA 8 bit update addr
@@ -65,6 +64,7 @@ enum {
   ERROR_SET_READMODE,
   ERROR_ERASE,
   ERROR_WRONG_CPLD_DEVICE_SELECTION = 115,
+  ERROR_FILE_READ = 116,
 };
 
 /*

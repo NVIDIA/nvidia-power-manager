@@ -1,8 +1,8 @@
 #include "updateCPLDFw_dbus_log_event.h"
 #include "libcpld.h"
 
-void emitLogMessage(char *message, char *arg0, char *arg1, char *severity,
-                    char *resolution) {
+void emitLogMessage(const char *message, const char *arg0, const char *arg1, const char *severity,
+                    const char *resolution) {
   static sd_bus *bus = NULL;
   sd_bus_default_system(&bus);
   if (bus == NULL) {
