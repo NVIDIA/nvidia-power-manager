@@ -195,7 +195,7 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
           std::vector<std::tuple<std::string, std::string, std::string>>
               association;
           association.emplace_back(
-              std::make_tuple("power_control", "chassis", chassisObjectPath));
+              std::make_tuple("chassis", "power_controls", chassisObjectPath));
           associationObj->associations(association);
         } else {
           auto propertyObj = std::make_unique<property::Property>(
