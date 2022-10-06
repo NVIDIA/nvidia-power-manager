@@ -54,7 +54,7 @@ class Cpld : public CpldInherit, public Util
     Cpld(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
          uint8_t address, const std::string& name, const std::string& modelN,
          const std::string& manufacturerN) :
-        CpldInherit(bus, (objPath).c_str(), CpldInherit::action::defer_emit),
+        CpldInherit(bus, (objPath).c_str()),
         bus(bus)
     {
 
