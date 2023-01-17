@@ -6,6 +6,7 @@
 #define FAIL_BIT (1 << 13)
 #define DONE_BIT (1 << 8)
 #define CONF_BITS ((1 << 23) | (1 << 24) | (1 << 25))
+#define PAGE_SIZE 16
 
 DragonCpld::DragonCpld(int updateBus, bool arbitrator, char *imageName,
                        const char *config)
@@ -44,6 +45,10 @@ int DragonCpld::fwUpdate() {
     goto close_fd;
   }
 
+  ret = readDeviceId();
+  if (ret)
+    goto close_cpld_fd;
+
   ret = enableConfigurationInterface();
   if (ret)
     goto close_cpld_fd;
@@ -60,7 +65,6 @@ int DragonCpld::fwUpdate() {
   ret = activate();
   if (ret)
     goto close_cpld_fd;
-
 close_cpld_fd:
   close(cpldRegFd);
 
@@ -78,17 +82,17 @@ end:
 int DragonCpld::readStatusRegister(uint32_t *value) {
   const char write[] = "\x3c\x00\x00\x00";
 
-  return transfer(fd, 1, address, (uint8_t *)&write, (uint8_t *)value, 4, 4);
+  return transfer(fd, 1, address, (uint8_t *)write, (uint8_t *)value, 4, 4);
 }
 
 int DragonCpld::waitBusy(int wait, int errorCode) {
-  uint32_t reg;
   int cnt = 0;
+  char cmd[] = "\xf0\x00\x00\x00";
+  char v;
 
   while (cnt < wait) {
-    if (readStatusRegister(&reg))
-      return static_cast<int>(UpdateError::ERROR_READ_STATUS_REG);
-    if ((reg & BUSY_BIT) == 0)
+    transfer(fd, 1, address, (uint8_t *)cmd, (uint8_t *)&v, 4, 1);
+    if (!(v & 0x80))
       break;
     sleep(1);
   }
@@ -98,8 +102,20 @@ int DragonCpld::waitBusy(int wait, int errorCode) {
   return 0;
 }
 
+int DragonCpld::readDeviceId() {
+  uint8_t cmd[] = {0xe0, 0x00, 0x00, 0x00};
+  uint8_t id[] = {0x61, 0x2b, 0xb0, 0x43};
+  uint8_t dev_id[5];
+
+  transfer(fd, 1, address, (uint8_t *)cmd, dev_id, 4, 4);
+  for (int i = 0; i < 4;i++)
+    if (id[i] != dev_id[i])
+      return static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID);
+  return 0;
+}
+
 int DragonCpld::enableConfigurationInterface() {
-  char cmd[5] = "\x74\x08\x00\x00";
+  uint8_t cmd[] = {0x74, 0x08, 0x00, 0x00};
   int ret = 0;
 
   ret = sendData(fd, address, cmd, 4,
@@ -117,8 +133,8 @@ int DragonCpld::enableConfigurationInterface() {
 }
 
 int DragonCpld::erase(bool reset) {
-  char cmd[5] = "\x0e\x04\x00\x00";
-  char cmd_reset[5] = "\x46\x00\x00\x00";
+  uint8_t cmd[] = {0x0E, 0x04, 0x00, 0x00};
+  uint8_t cmd_reset[] = {0x46, 0x00, 0x00, 0x00};
   uint32_t reg;
   int ret;
 
@@ -148,17 +164,18 @@ int DragonCpld::erase(bool reset) {
 }
 
 int DragonCpld::sendImage() {
-  char cmd[20] = "\x70\x00\x00\x01";
-  char cmdDone[5] = "\x5e\x00\x00\x00";
-  int pageSize = 16;
+  uint8_t cmd[(PAGE_SIZE+5)] = {0x70, 0x00, 0x00, 0x01};
+  uint8_t cmdDone[] = {0x5E, 0x00, 0x00, 0x00};
   int remaining = imageSize;
   int imageOffset = 0;
   uint32_t reg;
   int ret = 0;
 
   while (remaining > 0) {
-    memcpy(&cmd[4], image + imageOffset, pageSize);
-    ret = sendData(fd, address, cmd, pageSize + 4,
+	  int toSend = std::min(remaining, PAGE_SIZE);
+	  memset(&cmd[4], 0, PAGE_SIZE);
+    memcpy(&cmd[4], image + imageOffset , toSend);
+    ret = sendData(fd, address, cmd, PAGE_SIZE + 4,
                    static_cast<int>(UpdateError::ERROR_SEND_IMAGE));
     if (ret)
       goto end;
@@ -166,7 +183,10 @@ int DragonCpld::sendImage() {
     if (ret) {
       return ret;
     }
+	  remaining -= toSend;
+  	imageOffset += toSend;
   }
+
   ret = sendData(fd, address, cmdDone, 4,
                  static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE));
   if (ret)
@@ -179,30 +199,34 @@ int DragonCpld::sendImage() {
   if (ret)
     return static_cast<int>(UpdateError::ERROR_READ_STATUS_REG);
 
-  if (!(reg & DONE_BIT)) {
+  if ((reg & BUSY_BIT) || (reg & FAIL_BIT)) {
     cleanUp();
     return static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_CHECK);
   }
-
 end:
   return ret;
 }
 
-int DragonCpld::waitRefresh(int result, int fd) {
+int DragonCpld::waitRefresh(int result) {
   int ret = 0;
-  char value;
+  int value;
   int cnt = 0;
+  std::string refreshPath ="/sys/devices/platform/i2carb/cpld_refresh";
 
 read_refresh:
-  ret = read(fd, &value, 1);
-  if (ret != 1) {
+  value = readSysFs(refreshPath);
+  if (value < 0) {
     ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH);
     goto end;
   }
   if (value != result) {
-    if (cnt++ < 5)
+	sleep(1);
+    if (cnt++ < 15)
       goto read_refresh;
-    ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT);
+    if (result)
+      ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT);
+    else
+      ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO);
     goto end;
   }
 end:
@@ -210,17 +234,11 @@ end:
 }
 
 int DragonCpld::activate() {
-  int refreshFd =
-      open("/sys/devices/platform/i2c-arbitrator/cpld_refresh", O_RDONLY);
-  char cmd1[3] = "\x10\x80";
-  char cmd2[3] = "\x10\x40";
-  char cmd_refresh[4] = "\x79\x00\x00";
+  uint8_t cmd1[] = {0x10, 0x80};
+  uint8_t cmd2[] = {0x10, 0x40};
+  uint8_t cmd_refresh[] = {0x79, 0x40, 0x0};
   int ret = 0;
   int rawBusFd = 0;
-  uint32_t reg;
-
-  if (refreshFd < 0)
-    return static_cast<int>(UpdateError::ERROR_CPLD_REFRESH_NOT_FOUND);
 
   ret = sendData(cpldRegFd, cpldRegAddress, cmd1, 2,
                  static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG1));
@@ -232,7 +250,7 @@ int DragonCpld::activate() {
     goto end;
   sleep(1);
 
-  ret = waitRefresh(1, refreshFd);
+  ret = waitRefresh(1);
   if (ret)
     goto end;
 
@@ -241,31 +259,20 @@ int DragonCpld::activate() {
     ret = static_cast<int>(UpdateError::ERROR_OPEN_BUS);
     goto end;
   }
-  ret = sendData(
-      rawBusFd, address, cmd_refresh, 3,
-      static_cast<int>(UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED));
-  if (ret)
-    goto closeBus;
 
-  ret = waitRefresh(0, refreshFd);
-  if (ret)
-    goto closeBus;
-
-  ret = readStatusRegister(&reg);
+  ret = transfer(rawBusFd, 0, address, cmd_refresh, nullptr, 3, 0);
   if (ret) {
-    ret = static_cast<int>(UpdateError::ERROR_READ_STATUS_REG);
+    ret = static_cast<int>(UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED);
     goto closeBus;
   }
 
-  if ((reg & CONF_BITS) || (reg & BUSY_BIT) || !(reg & DONE_BIT)) {
-    ret = static_cast<int>(UpdateError::ERROR_CPLD_REFRESH_FAILED);
+  ret = waitRefresh(0);
+  if (ret)
     goto closeBus;
-  }
 
 closeBus:
   close(rawBusFd);
 end:
-  close(refreshFd);
   return ret;
 }
 
@@ -274,7 +281,9 @@ int DragonCpld::cleanUp() {
   ret = erase(false);
   if (ret)
     return static_cast<int>(UpdateError::ERROR_CLEANUP_ERASE);
-  return activate();
+
+	ret = activate();
+	return ret;
 }
 
 int DragonCpld::loadConfig() {
@@ -291,10 +300,14 @@ int DragonCpld::loadConfig() {
       std::string busS = cpldInfo.at("Bus");
       int busN = stoi(busS);
       if (busN == bus) {
-        address = cpldInfo.at("Address");
-        cpldRegBus = cpldInfo.at("CpldRegBus");
-        cpldRegAddress = cpldInfo.at("CpldRegAddress");
-        cpldRawBus = cpldInfo.at("CpldRawBus");
+        std::string ad = cpldInfo.at("Address");
+		address = stoi(ad);
+        std::string cpldRb = cpldInfo.at("CpldRegBus");
+		cpldRegBus = stoi(cpldRb);
+        std::string cpldRa = cpldInfo.at("CpldRegAddress");
+        cpldRegAddress = stoi(cpldRa);
+        std::string cpldRaB = cpldInfo.at("CpldRawBus");
+        cpldRawBus = stoi(cpldRaB);
       }
     } catch (const std::exception &e) {
       return static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED);

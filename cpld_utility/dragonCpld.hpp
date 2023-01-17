@@ -1,5 +1,4 @@
 #include "dragonChassisBase.hpp"
-
 #include <stdint.h>
 
 class DragonCpld : public DragonChassisBase {
@@ -19,10 +18,11 @@ protected:
   int enableConfigurationInterface();
   int erase(bool reset);
   int activate();
+  int readDeviceId();
   int cleanUp();
   int waitBusy(int wait, int errorCode);
   int readStatusRegister(uint32_t *value);
-  int waitRefresh(int result, int fd);
+  int waitRefresh(int result);
   int loadConfig();
   int sendImage() override;
 };

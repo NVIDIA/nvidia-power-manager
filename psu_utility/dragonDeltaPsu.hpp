@@ -7,7 +7,7 @@ public:
   virtual ~DragonDeltaPsu();
 
 private:
-  char fwIdent[15];
+  uint8_t fwIdent[15];
 
   virtual int unlock() override;
   virtual int erase() override;

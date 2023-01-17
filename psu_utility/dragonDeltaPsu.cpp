@@ -46,13 +46,13 @@ end:
 }
 
 int DragonDeltaPsu::erase() {
-  char cmd[4] = "\xf3\x01\x00";
+  uint8_t cmd[4] = {0xf3, 0x01, 0x00};
   return sendData(fd, address, cmd, 3,
                   static_cast<int>(UpdateError::ERROR_ERASE));
 }
 
 int DragonDeltaPsu::sendCrc(uint16_t crc, uint16_t blockSize) {
-  char cmd[7];
+  uint8_t cmd[7];
 
   cmd[0] = 0xf4;
   cmd[1] = 4;
@@ -83,7 +83,7 @@ end:
 }
 
 int DragonDeltaPsu::sendImage() {
-  char cmd[69];
+  uint8_t cmd[69];
   uint16_t blockIndex = 0;
   int length = 64;
   int remaining = imageSize;
@@ -118,7 +118,7 @@ end:
 }
 
 int DragonDeltaPsu::activate() {
-  char cmd[3] = "\x01\x00";
+  uint8_t cmd[3] = {0x01, 0x00};
   char read[6] = {0};
   int ret = sendData(fd, address, cmd, 2,
                      static_cast<int>(UpdateError::ERROR_ACTIVATE));

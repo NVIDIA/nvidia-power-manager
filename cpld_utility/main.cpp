@@ -9,7 +9,7 @@ char *configFile = NULL;
 
 int checkDigit(char *str) {
   unsigned int i;
-  if (atoi(str) > 13)
+  if (atoi(str) > 42)
     return 1;
 
   for (i = 0; i < strlen(str); i++) {
@@ -77,6 +77,7 @@ int main(int argc, char *argv[]) {
     if (argc > 6) {
       DragonCpld dp(bus, true, image, configFile);
       ret = dp.fwUpdate();
+      dp.printError(ret);
     } else {
       ret = flash_remote_mid_fpga_image(bus, image_sel, image,
                                         &flashing_progress, cpld1);

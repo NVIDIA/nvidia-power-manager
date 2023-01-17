@@ -2,6 +2,10 @@
 
 #include <stdint.h>
 #include <sys/stat.h>
+#include <string>
+#include<fstream>
+
+#define ARB_STATE_PATH "/sys/devices/platform/i2carb/arb_state"
 
 class DragonChassisBase : public I2c {
 public:
@@ -15,6 +19,7 @@ public:
   }
 
   void printError(int code) {
+
     switch (code) {
     case static_cast<int>(UpdateError::ERROR_LOAD_IMAGE):
       std::cerr << "UpdateError::ERROR_LOAD_IMAGE" << std::endl;
@@ -89,7 +94,7 @@ public:
       std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE_BUSY" << std::endl;
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_CHECK):
-      std::cerr << "UpdateError::ERROR_SEND_IMAGE_CHECK" << std::endl;
+      std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE_CHECK" << std::endl;
       break;
     case static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG1):
       std::cerr << "UpdateError::ERROR_ACTIVATE_CPLD_REG1" << std::endl;
@@ -117,6 +122,9 @@ public:
     case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT):
       std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT" << std::endl;
       break;
+	case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO):
+      std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO" << std::endl;
+      break;
     case static_cast<int>(UpdateError::ERROR_CLEANUP_ERASE):
       std::cerr << "UpdateError::ERROR_CLEANUP_ERASE" << std::endl;
       break;
@@ -129,7 +137,12 @@ public:
     case static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED):
       std::cerr << "UpdateError::ERROR_CONFIG_PARSE_FAILED" << std::endl;
       break;
-
+    case static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID):
+      std::cerr << "UpdateError::ERROR_INVALID_DEVICE_ID" << std::endl;
+      break;
+    case 0:
+      std::cerr << "Update Was Successful" << std::endl;
+      break;
     default:
       std::cerr << "Invalid error code" << std::endl;
       break;
@@ -174,6 +187,8 @@ public:
     ERROR_CONFIG_NOT_FOUND = 35,
     ERROR_CONFIG_FORMAT = 36,
     ERROR_CONFIG_PARSE_FAILED = 37,
+    ERROR_INVALID_DEVICE_ID = 38,
+    ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO = 39,
   };
 
 protected:
@@ -185,40 +200,58 @@ protected:
   int imageSize;
   int fd;
 
+  int readSysFs(std::string path) {
+    int ret = 0;
+    std::string s;
+    std::ifstream f(path.c_str());
+    if (!f)
+      return -1;
+    f >> s;
+    f.close();
+    try {
+      ret = std::stoi(s);
+    } catch (const std::exception &e) {
+      ret = -1;
+    }
+    return ret;
+  }
+
+  int writeSysFs(std::string path, int value)
+  {
+    std::ofstream f(path.c_str());
+    if (!f)
+      return -1;
+    f << value;
+    f.close();
+    return 0;
+  }
+
   int enableArbitration(bool enable) {
-    int arbFd = open("/sys/devices/platform/i2c-arbitrator/arb_state", O_RDWR);
     int ret = 0;
     int error = static_cast<int>(UpdateError::ERROR_DISABLE_ARB);
-    char value;
-    char valueToWrite = 0;
-
-    if (arbFd < 0)
-      return static_cast<int>(UpdateError::ERROR_ARB_NOT_FOUND);
+    int value;
+    int valueToWrite = 0;
 
     if (enable) {
       error = static_cast<int>(UpdateError::ERROR_ENABLE_ARB);
       valueToWrite = 1;
     }
 
-    ret = read(arbFd, &value, 1);
-    if (ret != 1) {
+    value = readSysFs(ARB_STATE_PATH);
+    if (value == -1) {
       ret = error;
       goto end;
     }
-
     if (value != valueToWrite) {
       int cnt = 0;
       do {
-        value = valueToWrite;
-
-        ret = write(arbFd, &valueToWrite, 1);
-        if (ret != 1) {
+        ret = writeSysFs(ARB_STATE_PATH, valueToWrite);
+        if (ret == -1) {
           ret = error;
           goto end;
         }
-
-        ret = read(arbFd, &value, 1);
-        if (ret != 1) {
+        value = readSysFs(ARB_STATE_PATH);
+        if (value == -1) {
           ret = error;
           goto end;
         }
@@ -231,7 +264,6 @@ protected:
       }
     }
   end:
-    close(arbFd);
     return ret;
   }
 
@@ -268,23 +300,30 @@ protected:
     return ret;
   }
 
-  int sendData(int send_fd, int send_addr, char *data, int length, int error) {
-    int ret = calculate_PEC((uint8_t *)data, address, length);
+  int sendData(int send_fd, int send_addr, uint8_t *data, int length, int error) {
+	uint8_t *dataWithPec =
+        static_cast<uint8_t *>(malloc((length + 1) * sizeof(uint8_t)));
+
+	if (!dataWithPec)
+		return error;
+	memcpy(dataWithPec, data, length);
+    int ret = calculate_PEC(dataWithPec, address, length);
 
     if (ret) {
       ret = error;
       goto end;
     }
 
-    ret = transfer(send_fd, 0, send_addr, (uint8_t *)data, nullptr, length + 1,
-                   0);
+    ret = transfer(send_fd, 0, send_addr, dataWithPec, nullptr, length + 1, 0);
     if (ret) {
       ret |= error;
       goto end;
     }
 
   end:
+	free(dataWithPec);
     return ret;
   }
+
   virtual int sendImage() = 0;
 };
