@@ -5,6 +5,7 @@
 #include <sdbusplus/bus/match.hpp>
 #include <xyz/openbmc_project/Association/Definitions/server.hpp>
 #include <xyz/openbmc_project/Inventory/Decorator/Asset/server.hpp>
+#include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/PowerSupply/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
@@ -26,6 +27,7 @@ using PowerSupplyInherit = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::server::Item,
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::PowerSupply,
     sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset,
+    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::LocationCode,
     sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
 
 using AssociationObject = sdbusplus::server::object::object<
