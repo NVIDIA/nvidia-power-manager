@@ -19,6 +19,9 @@ if not gtest_dep.found() or not gmock_dep.found()
     endif
 endif
 
+configure_file(output: 'config.h',
+              configuration : cdata,
+              )
 
 test(
     'test_cpld',

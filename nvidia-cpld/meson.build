@@ -10,6 +10,10 @@ cdata.set_quoted(
 
 cdata.set_quoted(
     'BASE_INV_PATH', '/xyz/openbmc_project/inventory/system/board')
+cdata.set_quoted(
+    'SW_INV_PATH', '/xyz/openbmc_project/software')
+cdata.set_quoted(
+    'SOFTWARE_INTERFACE', 'xyz.openbmc_project.Software.Version')
 
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')

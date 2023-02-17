@@ -21,17 +21,17 @@ void emitLogMessage(const char *message, const char *arg0, const char *arg1, con
     if (sd_bus_call_method(
             bus, LOG_SERVICE, LOG_PATH, LOG_CREATE_INTERFACE,
             LOG_CREATE_FUNCTION, &err, &reply, LOG_CREATE_SIGNATURE,
-            updateMessage, severity, 3, "REDFISH_MESSAGE_ID", updateMessage,
-            "REDFISH_MESSAGE_ARGS", args,
+            updateMessage, severity, 4, "REDFISH_MESSAGE_ID", updateMessage,
+            "REDFISH_MESSAGE_ARGS", args, "namespace", "FWUpdate",
             "xyz.openbmc_project.Logging.Entry.Resolution", resolution) < 0) {
       fprintf(stderr, "Unable to call log creation function");
     }
   } else {
-    if (sd_bus_call_method(bus, LOG_SERVICE, LOG_PATH, LOG_CREATE_INTERFACE,
-                           LOG_CREATE_FUNCTION, &err, &reply,
-                           LOG_CREATE_SIGNATURE, updateMessage, severity, 2,
-                           "REDFISH_MESSAGE_ID", updateMessage,
-                           "REDFISH_MESSAGE_ARGS", args) < 0) {
+    if (sd_bus_call_method(
+            bus, LOG_SERVICE, LOG_PATH, LOG_CREATE_INTERFACE,
+            LOG_CREATE_FUNCTION, &err, &reply, LOG_CREATE_SIGNATURE,
+            updateMessage, severity, 3, "REDFISH_MESSAGE_ID", updateMessage,
+            "REDFISH_MESSAGE_ARGS", args, "namespace", "FWUpdate") < 0) {
       fprintf(stderr, "Unable to call log creation function");
     }
   }

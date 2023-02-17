@@ -4,7 +4,7 @@
 #include <string>
 
 #include <sdbusplus/test/sdbus_mock.hpp>
-
+#include "config.h"
 #include "cpld_util.hpp"
 #include "cpld.hpp"
 
@@ -49,14 +49,26 @@ static void sdbusMockExpectPropertyChangeMultiple(sdbusplus::SdBusMock & sdbus_m
 TEST(CpldTest, CpldTestDbus)
 {
     std::string path = "/xyz/openbmc_project/inventory/system/chassis/motherboard/CPLD0";
+    std::string swpath = "/xyz/openbmc_project/software/CPLD0";
     sdbusplus::SdBusMock sdbus_mock;
     auto bus_mock = sdbusplus::get_mocked_new(&sdbus_mock);
     std::vector<std::string> itemNames = {"Present", "PrettyName"};
     std::vector<std::string> assetNames = {"Manufacturer", "Model", "PartNumber", "SerialNumber"};
+    std::vector<std::string> versionNames = {"Purpose", "SoftwareId",
+                                             "Version"};
 
     sdbusMockExpectPropertyChangeMultiple(sdbus_mock, path, "xyz.openbmc_project.Inventory.Item", itemNames);
+    sdbusMockExpectPropertyChangeMultiple(
+        sdbus_mock, path, "xyz.openbmc_project.Inventory.Decorator.Asset",
+        assetNames);
     sdbusMockExpectPropertyChanged(sdbus_mock, path, "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional");
     sdbusMockExpectPropertyChanged(sdbus_mock, path, "xyz.openbmc_project.Inventory.Item.Chassis", "Type");
+    sdbusMockExpectPropertyChangeMultiple(
+        sdbus_mock, swpath, "xyz.openbmc_project.Software.Version",
+        versionNames);
+    sdbusMockExpectPropertyChanged(
+        sdbus_mock, swpath, "xyz.openbmc_project.Association.Definitions",
+        "Associations");
 
     nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name", "", "");
 }

@@ -9,10 +9,12 @@ cdata.set_quoted(
     'BUSNAME', 'com.Nvidia.Powersupply')
 
 cdata.set_quoted(
-    'BASE_INV_PATH', '/xyz/openbmc_project/sensors/system/chassis/motherboard')
-
+    'BASE_INV_PATH', '/xyz/openbmc_project/inventory/system/chassis/motherboard')
 cdata.set_quoted(
-    'OBJ_MANAGER_PATH', '/xyz/openbmc_project/sensors')
+    'SW_INV_PATH', '/xyz/openbmc_project/software')
+cdata.set_quoted(
+    'SOFTWARE_INTERFACE', 'xyz.openbmc_project.Software.Version')
+
 
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')

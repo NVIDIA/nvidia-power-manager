@@ -5,7 +5,6 @@
 #include <unistd.h>
 
 #include <nlohmann/json.hpp>
-#include <phosphor-logging/elog-errors.hpp>
 #include <phosphor-logging/elog.hpp>
 #include <phosphor-logging/log.hpp>
 

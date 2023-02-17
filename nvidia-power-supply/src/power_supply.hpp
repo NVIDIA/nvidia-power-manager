@@ -8,6 +8,7 @@
 #include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/PowerSupply/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/server.hpp>
+#include <xyz/openbmc_project/Software/Version/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/PowerState/server.hpp>
 
@@ -32,6 +33,8 @@ using PowerSupplyInherit = sdbusplus::server::object::object<
 
 using AssociationObject = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
+using VersionObject = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::Software::server::Version>;
 
 using AssociationIfaceMap =
     std::map<std::string, std::unique_ptr<AssociationObject>>;
@@ -42,6 +45,49 @@ using AssociationList =
 using PropertyType = std::variant<std::string, bool>;
 
 using Properties = std::map<std::string, PropertyType>;
+
+/**
+ * @brief VersionInterface for dbus
+ */
+class VersionInterface : public VersionObject
+{
+  public:
+    /**
+     * @brief Construct a new VersionInterface object
+     *
+     * @param bus
+     * @param path
+     * fwversion
+     */
+    VersionInterface(sdbusplus::bus::bus& bus, const std::string& path,
+                     std::string& fwversion) :
+        VersionObject(bus, path.c_str(), action::emit_interface_added)
+    {
+        version(fwversion);
+        purpose(VersionPurpose::Other);
+    }
+};
+
+/**
+ * @brief Association for dbus
+ */
+class Association : public AssociationObject
+{
+  public:
+    /**
+     * @brief Construct a new Association object
+     *
+     * @param bus
+     * @param path
+     * @param fwAssociation
+     */
+    Association(sdbusplus::bus::bus& bus, const std::string& path,
+                AssociationList& fwAssociation) :
+        AssociationObject(bus, path.c_str(), action::emit_interface_added)
+    {
+        associations(fwAssociation);
+    }
+};
 
 /**
  * @class PowerSupply
@@ -88,8 +134,35 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
         sdbusplus::xyz::openbmc_project::State::Decorator::server::PowerState::powerState(
             sdbusplus::xyz::openbmc_project::State::Decorator::server::PowerState::State::On
         );
+        registerAssociationInterface(bus, objPath);
+        registerSoftwareVersion(bus, objPath);
 
         createAssociation(assoc);
+    }
+
+    void registerAssociationInterface(sdbusplus::bus::bus& bus,
+                                                   const std::string& ifPath)
+    {
+        AssociationList fwAssociation;
+        std::string swpath = SW_INV_PATH;
+        swpath += "/" + std::filesystem::path(ifPath).filename().string();
+        fwAssociation.emplace_back(
+            std::make_tuple("inventory", "activation", swpath));
+        fwAssociation.emplace_back(std::make_tuple(
+            upFwdAssociation, upRevAssociation, softwareUpdateablePath));
+
+        AssociationObj =
+            std::make_unique<Association>(bus, swpath, fwAssociation);
+    }
+
+    void registerSoftwareVersion(sdbusplus::bus::bus& bus,
+                                              const std::string& ifPath)
+    {
+        std::string swpath = SW_INV_PATH;
+        swpath += "/" + std::filesystem::path(ifPath).filename().string();
+        std::string psuVersion = getVersion();
+        VersionObj =
+            std::make_unique<VersionInterface>(bus, swpath, psuVersion);
     }
 
     void updatePresence(bool present)
@@ -128,6 +201,13 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
      *
      */
     std::string inventoryPath;
+    std::unique_ptr<VersionInterface> VersionObj;
+    std::unique_ptr<Association> AssociationObj;
+    const std::string upFwdAssociation = "software_version";
+    const std::string upRevAssociation = "updateable";
+    const std::string purpose =
+        "xyz.openbmc_project.Software.Version.VersionPurpose.Other";
+    const std::string softwareUpdateablePath = "/xyz/openbmc_project/software";
 };
 
 } // namespace nvidia::power::psu

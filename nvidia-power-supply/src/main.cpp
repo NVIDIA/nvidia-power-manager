@@ -18,7 +18,7 @@ int main(void)
         auto bus = sdbusplus::bus::new_default();
         auto event = sdeventplus::Event::get_default();
 
-        sdbusplus::server::manager::manager objManager(bus, OBJ_MANAGER_PATH);
+        sdbusplus::server::manager::manager objManager(bus, BASE_INV_PATH);
 
         bus.request_name(BUSNAME);
         bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
