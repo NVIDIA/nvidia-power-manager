@@ -7,14 +7,18 @@
 #define DONE_BIT (1 << 8)
 #define CONF_BITS ((1 << 23) | (1 << 24) | (1 << 25))
 #define PAGE_SIZE 16
+#define REFRESH_GPIO_NAME "CPLD_REFRESH_DONE-I"
 
-DragonCpld::DragonCpld(int updateBus, bool arbitrator, char *imageName,
+DragonCpld::DragonCpld(int updateBus, char *imageName,
                        const char *config)
-    : DragonChassisBase(updateBus, 0, arbitrator, imageName), config(config)
+    : DragonChassisBase(updateBus, 0, true, imageName), config(config)
 
 {}
 
-DragonCpld::~DragonCpld() {}
+DragonCpld::~DragonCpld() {
+  if (!arb && cpldRefreshGpio)
+    cpldRefreshGpio.reset();
+  }
 
 int DragonCpld::fwUpdate() {
   int ret = 0;
@@ -214,11 +218,19 @@ int DragonCpld::waitRefresh(int result) {
   std::string refreshPath ="/sys/devices/platform/i2carb/cpld_refresh";
 
 read_refresh:
-  value = readSysFs(refreshPath);
-  if (value < 0) {
-    ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH);
-    goto end;
+  if (arb)
+  {
+    value = readSysFs(refreshPath);
+    if (value < 0) {
+      ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH);
+      goto end;
+    }
   }
+  else
+  {
+    value = cpldRefreshGpio.get_value();
+  }
+
   if (value != result) {
 	sleep(1);
     if (cnt++ < 15)
@@ -297,6 +309,12 @@ int DragonCpld::loadConfig() {
 
   for (const auto &cpldInfo : data.at("CPLD")) {
     try {
+      std::string arbS = cpldInfo.at("Arbitration");
+      int arbN = stoi(arbS);
+      if (arbN)
+        arb = true;
+      else
+        arb = false;
       std::string busS = cpldInfo.at("Bus");
       int busN = stoi(busS);
       if (busN == bus) {
@@ -311,6 +329,18 @@ int DragonCpld::loadConfig() {
       }
     } catch (const std::exception &e) {
       return static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED);
+    }
+    if (!arb)
+    {
+      cpldRefreshGpio = gpiod::find_line(REFRESH_GPIO_NAME);
+      if (!cpldRefreshGpio)
+        return static_cast<int>(UpdateError::ERROR_FAILED_TO_GET_GPIO);
+      try {
+          cpldRefreshGpio.request({"cpldUpdate",
+                                  gpiod::line_request::DIRECTION_INPUT, {}});
+      } catch (const std::exception &e) {
+        return static_cast<int>(UpdateError::ERROR_FAILED_TO_GET_GPIO);
+      }
     }
   }
 

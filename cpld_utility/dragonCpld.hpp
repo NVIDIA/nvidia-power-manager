@@ -1,9 +1,10 @@
 #include "dragonChassisBase.hpp"
 #include <stdint.h>
+#include <gpiod.hpp>
 
 class DragonCpld : public DragonChassisBase {
 public:
-  DragonCpld(int updateBus, bool arbitrator, char *imageName,
+  DragonCpld(int updateBus, char *imageName,
              const char *config);
   virtual ~DragonCpld();
   int fwUpdate();
@@ -14,6 +15,7 @@ protected:
   int cpldRegFd;
   int cpldRawBus;
   const char *config;
+  gpiod::line cpldRefreshGpio;
 
   int enableConfigurationInterface();
   int erase(bool reset);

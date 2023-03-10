@@ -6,6 +6,7 @@ executable('cpldupdate', 'main.cpp','libcpld.cpp','libi2c.cpp','updateCPLDFw_dbu
                               phosphor_logging,
                               phosphor_dbus_interfaces,
                               fmt,
+                              dependency('libgpiodcxx', fallback: ['libgpiod', 'gpiodcxx_dep'], default_options: ['bindings=cxx']),
                             ],
                include_directories : incdir,
                install : true,

@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
                                      cpld0);
   } else if (cpldDeviceSelection == 2) {
     if (argc > 6) {
-      DragonCpld dp(bus, true, image, configFile);
+      DragonCpld dp(bus, image, configFile);
       ret = dp.fwUpdate();
       dp.printError(ret);
     } else {

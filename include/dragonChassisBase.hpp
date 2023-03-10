@@ -140,6 +140,9 @@ public:
     case static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID):
       std::cerr << "UpdateError::ERROR_INVALID_DEVICE_ID" << std::endl;
       break;
+    case static_cast<int>(UpdateError::ERROR_FAILED_TO_GET_GPIO):
+      std::cerr << "UpdateError::ERROR_FAILED_TO_GET_GPIO" << std::endl;
+      break;
     case 0:
       std::cerr << "Update Was Successful" << std::endl;
       break;
@@ -189,6 +192,7 @@ public:
     ERROR_CONFIG_PARSE_FAILED = 37,
     ERROR_INVALID_DEVICE_ID = 38,
     ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO = 39,
+    ERROR_FAILED_TO_GET_GPIO = 40,
   };
 
 protected:
