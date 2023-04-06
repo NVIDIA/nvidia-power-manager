@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2023 Nvidia Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include "dragonCpld.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -18,7 +34,7 @@ DragonCpld::DragonCpld(int updateBus, char *imageName,
 DragonCpld::~DragonCpld() {
   if (!arb && cpldRefreshGpio)
     cpldRefreshGpio.reset();
-  }
+}
 
 int DragonCpld::fwUpdate() {
   int ret = 0;
@@ -84,14 +100,14 @@ end:
 }
 
 int DragonCpld::readStatusRegister(uint32_t *value) {
-  const char write[] = "\x3c\x00\x00\x00";
+  const char write[] = "\x3c\x00\x00\x00"; //read status register command from Lattice specification
 
   return transfer(fd, 1, address, (uint8_t *)write, (uint8_t *)value, 4, 4);
 }
 
 int DragonCpld::waitBusy(int wait, int errorCode) {
   int cnt = 0;
-  char cmd[] = "\xf0\x00\x00\x00";
+  char cmd[] = "\xf0\x00\x00\x00"; //read busy register command from Lattice specification
   char v;
 
   while (cnt < wait) {
@@ -107,8 +123,8 @@ int DragonCpld::waitBusy(int wait, int errorCode) {
 }
 
 int DragonCpld::readDeviceId() {
-  uint8_t cmd[] = {0xe0, 0x00, 0x00, 0x00};
-  uint8_t id[] = {0x61, 0x2b, 0xb0, 0x43};
+  uint8_t cmd[] = {0xe0, 0x00, 0x00, 0x00}; //read device id command from Lattice specification
+  uint8_t id[] = {0x61, 0x2b, 0xb0, 0x43}; //device id supported
   uint8_t dev_id[5];
 
   transfer(fd, 1, address, (uint8_t *)cmd, dev_id, 4, 4);
@@ -119,7 +135,10 @@ int DragonCpld::readDeviceId() {
 }
 
 int DragonCpld::enableConfigurationInterface() {
+
+  //enable configuration interface command from Lattice specification
   uint8_t cmd[] = {0x74, 0x08, 0x00, 0x00};
+  const int timeout = 5;
   int ret = 0;
 
   ret = sendData(fd, address, cmd, 4,
@@ -128,7 +147,7 @@ int DragonCpld::enableConfigurationInterface() {
     return ret;
   }
 
-  ret = waitBusy(5, static_cast<int>(UpdateError::ERROR_ENABLE_CFG_INTER));
+  ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_ENABLE_CFG_INTER));
   if (ret) {
     return ret;
   }
@@ -137,8 +156,12 @@ int DragonCpld::enableConfigurationInterface() {
 }
 
 int DragonCpld::erase(bool reset) {
+
+  //erase command from Lattice specification
   uint8_t cmd[] = {0x0E, 0x04, 0x00, 0x00};
+  //reset command from Lattice specification
   uint8_t cmd_reset[] = {0x46, 0x00, 0x00, 0x00};
+  const int timeout = 5;
   uint32_t reg;
   int ret;
 
@@ -147,7 +170,7 @@ int DragonCpld::erase(bool reset) {
   if (ret)
     return ret;
 
-  ret = waitBusy(5, static_cast<int>(UpdateError::ERROR_ERASE));
+  ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_ERASE));
   if (ret) {
     return ret;
   }
@@ -168,9 +191,14 @@ int DragonCpld::erase(bool reset) {
 }
 
 int DragonCpld::sendImage() {
+  //send image command from Lattice specification
+  //send command is 4 bytes, so it is sending 4 bytes
+  //of the command and PAGE_SIZE of data
   uint8_t cmd[(PAGE_SIZE+5)] = {0x70, 0x00, 0x00, 0x01};
+  //done sending image command from Lattice specification
   uint8_t cmdDone[] = {0x5E, 0x00, 0x00, 0x00};
   int remaining = imageSize;
+  const int timeout = 5;
   int imageOffset = 0;
   uint32_t reg;
   int ret = 0;
@@ -183,7 +211,7 @@ int DragonCpld::sendImage() {
                    static_cast<int>(UpdateError::ERROR_SEND_IMAGE));
     if (ret)
       goto end;
-    ret = waitBusy(5, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_BUSY));
+    ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_BUSY));
     if (ret) {
       return ret;
     }
@@ -195,7 +223,7 @@ int DragonCpld::sendImage() {
                  static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE));
   if (ret)
     goto end;
-  ret = waitBusy(5, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_BUSY));
+  ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_BUSY));
   if (ret) {
     return ret;
   }
@@ -216,7 +244,7 @@ int DragonCpld::waitRefresh(int result) {
   int value;
   int cnt = 0;
   std::string refreshPath ="/sys/devices/platform/i2carb/cpld_refresh";
-
+  const int arbTimeout = 15;
 read_refresh:
   if (arb)
   {
@@ -233,7 +261,7 @@ read_refresh:
 
   if (value != result) {
 	sleep(1);
-    if (cnt++ < 15)
+    if (cnt++ < arbTimeout)
       goto read_refresh;
     if (result)
       ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT);
@@ -246,8 +274,12 @@ end:
 }
 
 int DragonCpld::activate() {
+  //per cpld specification to activate an image the bmc must set 2 bits in the
+  //cpld register in specific order. once this is done arbitrator will be disabled
+  //on cpld side so raw access i2c must be used to talk to the cpld
   uint8_t cmd1[] = {0x10, 0x80};
   uint8_t cmd2[] = {0x10, 0x40};
+  //refresh command from Lattice specification
   uint8_t cmd_refresh[] = {0x79, 0x40, 0x0};
   int ret = 0;
   int rawBusFd = 0;

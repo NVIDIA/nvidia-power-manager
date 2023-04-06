@@ -1,14 +1,44 @@
+/*
+// Copyright (c) 2023 Nvidia Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include "i2c.hpp"
 
 #include <stdint.h>
 #include <sys/stat.h>
 #include <string>
 #include<fstream>
+#include <phosphor-logging/log.hpp>
 
 #define ARB_STATE_PATH "/sys/devices/platform/i2carb/arb_state"
 
+/*
+* DragonChassisBase class is virtual class that will be used for Dragon PSU and CPLD update.
+* class will hold info about general purpose variables and general purpose methods.
+*/
+
 class DragonChassisBase : public I2c {
 public:
+
+  /*Constructor:
+  * inputs:
+  * bus - i2c bus number to use
+  * address - i2c address to use
+  * arbitrator - is bus arbitrated or not
+  * imageName - path to the file holding update data
+  */
   DragonChassisBase(int bus, int address, bool arbitrator, char *imageName)
       : bus(bus), address(address), arb(arbitrator), imageName(imageName),
         image(nullptr){};
@@ -18,140 +48,151 @@ public:
       free(image);
   }
 
+  /* printError:
+  * The method converts enum to the textual representation of the error code
+  * inputs:
+  * code - enum for the error code
+  */
   void printError(int code) {
 
+    using namespace phosphor::logging;
+
+    std::string msg;
     switch (code) {
     case static_cast<int>(UpdateError::ERROR_LOAD_IMAGE):
-      std::cerr << "UpdateError::ERROR_LOAD_IMAGE" << std::endl;
+      msg = "UpdateError::ERROR_LOAD_IMAGE";
       break;
     case static_cast<int>(UpdateError::ERROR_ENABLE_ARB):
-      std::cerr << "UpdateError::ERROR_ENABLE_ARB" << std::endl;
+      msg = "UpdateError::ERROR_ENABLE_ARB";
       break;
     case static_cast<int>(UpdateError::ERROR_DISABLE_ARB):
-      std::cerr << "UpdateError::ERROR_DISABLE_ARB" << std::endl;
+      msg = "UpdateError::ERROR_DISABLE_ARB";
       break;
     case static_cast<int>(UpdateError::ERROR_OPEN_BUS):
-      std::cerr << "UpdateError::ERROR_OPEN_BUS" << std::endl;
+      msg = "UpdateError::ERROR_OPEN_BUS";
       break;
     case static_cast<int>(UpdateError::ERROR_UNLOCK):
-      std::cerr << "UpdateError::ERROR_UNLOCK" << std::endl;
+      msg = "UpdateError::ERROR_UNLOCK";
       break;
     case static_cast<int>(UpdateError::ERROR_ERASE):
-      std::cerr << "UpdateError::ERROR_LOAD_IMAGE" << std::endl;
+      msg = "UpdateError::ERROR_LOAD_IMAGE";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_IMAGE):
-      std::cerr << "UpdateError::ERROR_SEND_IMAGE" << std::endl;
+      msg = "UpdateError::ERROR_SEND_IMAGE";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_CRC):
-      std::cerr << "UpdateError::ERROR_SEND_CRC" << std::endl;
+      msg = "UpdateError::ERROR_SEND_CRC";
       break;
     case static_cast<int>(UpdateError::ERROR_READ_CRC):
-      std::cerr << "UpdateError::ERROR_READ_CRC" << std::endl;
+      msg = "UpdateError::ERROR_READ_CRC";
       break;
     case static_cast<int>(UpdateError::ERROR_ACTIVATE):
-      std::cerr << "UpdateError::ERROR_ACTIVATE" << std::endl;
+      msg = "UpdateError::ERROR_ACTIVATE";
       break;
     case static_cast<int>(UpdateError::ERROR_OPEN_IMAGE):
-      std::cerr << "UpdateError::ERROR_OPEN_IMAGE" << std::endl;
+      msg = "UpdateError::ERROR_OPEN_IMAGE";
       break;
     case static_cast<int>(UpdateError::ERROR_STAT_IMAGE):
-      std::cerr << "UpdateError::ERROR_STAT_IMAGE" << std::endl;
+      msg = "UpdateError::ERROR_STAT_IMAGE";
       break;
     case static_cast<int>(UpdateError::ERROR_WRONG_MANUFACTURER):
-      std::cerr << "UpdateError::ERROR_WRONG_MANUFACTURER" << std::endl;
+      msg = "UpdateError::ERROR_WRONG_MANUFACTURER";
       break;
     case static_cast<int>(UpdateError::ERROR_READ_MANUFACTURER):
-      std::cerr << "UpdateError::ERROR_READ_MANUFACTURER" << std::endl;
+      msg = "UpdateError::ERROR_READ_MANUFACTURER";
       break;
     case static_cast<int>(UpdateError::ERROR_READ_STATUS_REG):
-      std::cerr << "UpdateError::ERROR_READ_STATUS_REG" << std::endl;
+      msg = "UpdateError::ERROR_READ_STATUS_REG";
       break;
     case static_cast<int>(UpdateError::ERROR_ENABLE_CFG_INTER):
-      std::cerr << "UpdateError::ERROR_ENABLE_CFG_INTER" << std::endl;
+      msg = "UpdateError::ERROR_ENABLE_CFG_INTERFACE";
       break;
     case static_cast<int>(UpdateError::ERROR_ENABLE_CFG_INTER_WRITE):
-      std::cerr << "UpdateError::ERROR_ENABLE_CFG_INTER_WRITE" << std::endl;
+      msg = "UpdateError::ERROR_ENABLE_CFG_INTER_WRITE";
       break;
     case static_cast<int>(UpdateError::ERROR_RESET):
-      std::cerr << "UpdateError::ERROR_RESET" << std::endl;
+      msg = "UpdateError::ERROR_RESET";
       break;
     case static_cast<int>(UpdateError::ERROR_ARB_NOT_FOUND):
-      std::cerr << "UpdateError::ERROR_ARB_NOT_FOUND" << std::endl;
+      msg = "UpdateError::ERROR_ARB_NOT_FOUND";
       break;
     case static_cast<int>(UpdateError::ERROR_WRONG_MODEL):
-      std::cerr << "UpdateError::ERROR_WRONG_MODEL" << std::endl;
+      msg = "UpdateError::ERROR_WRONG_MODEL";
       break;
     case static_cast<int>(UpdateError::ERROR_READ_MODEL):
-      std::cerr << "UpdateError::ERROR_READ_MODEL" << std::endl;
+      msg = "UpdateError::ERROR_READ_MODEL";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_BUSY):
-      std::cerr << "UpdateError::ERROR_SEND_IMAGE_BUSY" << std::endl;
+      msg = "UpdateError::ERROR_SEND_IMAGE_BUSY";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE):
-      std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE" << std::endl;
+      msg = "UpdateError::ERROR_SEND_IMAGE_DONE";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_BUSY):
-      std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE_BUSY" << std::endl;
+      msg = "UpdateError::ERROR_SEND_IMAGE_DONE_BUSY";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_CHECK):
-      std::cerr << "UpdateError::ERROR_SEND_IMAGE_DONE_CHECK" << std::endl;
+      msg = "UpdateError::ERROR_SEND_IMAGE_DONE_CHECK";
       break;
     case static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG1):
-      std::cerr << "UpdateError::ERROR_ACTIVATE_CPLD_REG1" << std::endl;
+      msg = "UpdateError::ERROR_ACTIVATE_CPLD_REG1";
       break;
     case static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG2):
-      std::cerr << "UpdateError::ERROR_ACTIVATE_CPLD_REG2" << std::endl;
+      msg = "UpdateError::ERROR_ACTIVATE_CPLD_REG2";
       break;
     case static_cast<int>(UpdateError::ERROR_CPLD_REFRESH_NOT_FOUND):
-      std::cerr << "UpdateError::ERROR_CPLD_REFRESH_NOT_FOUND" << std::endl;
+      msg = "UpdateError::ERROR_CPLD_REFRESH_NOT_FOUND";
       break;
     case static_cast<int>(UpdateError::ERROR_CPLD_REFRESH_FAILED):
-      std::cerr << "UpdateError::ERROR_CPLD_REFRESH_FAILED" << std::endl;
+      msg = "UpdateError::ERROR_CPLD_REFRESH_FAILED";
       break;
     case static_cast<int>(UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED):
-      std::cerr << "UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED"
-                << std::endl;
+      msg = "UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED";
       break;
     case static_cast<int>(UpdateError::ERROR_INTERNAL_CPLD_REFRESH_FAILED):
-      std::cerr << "UpdateError::ERROR_INTERNAL_CPLD_REFRESH_FAILED"
-                << std::endl;
+      msg = "UpdateError::ERROR_INTERNAL_CPLD_REFRESH_FAILED";
       break;
     case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH):
-      std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH" << std::endl;
+      msg = "UpdateError::ERROR_READ_CPLD_REFRESH";
       break;
     case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT):
-      std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT" << std::endl;
+      msg = "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT";
       break;
-	case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO):
-      std::cerr << "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO" << std::endl;
+    case static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO):
+      msg = "UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO";
       break;
     case static_cast<int>(UpdateError::ERROR_CLEANUP_ERASE):
-      std::cerr << "UpdateError::ERROR_CLEANUP_ERASE" << std::endl;
+      msg = "UpdateError::ERROR_CLEANUP_ERASE";
       break;
     case static_cast<int>(UpdateError::ERROR_CONFIG_NOT_FOUND):
-      std::cerr << "UpdateError::ERROR_CONFIG_NOT_FOUND" << std::endl;
+      msg = "UpdateError::ERROR_CONFIG_NOT_FOUND";
       break;
     case static_cast<int>(UpdateError::ERROR_CONFIG_FORMAT):
-      std::cerr << "UpdateError::ERROR_CONFIG_FORMAT" << std::endl;
+      msg = "UpdateError::ERROR_CONFIG_FORMAT";
       break;
     case static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED):
-      std::cerr << "UpdateError::ERROR_CONFIG_PARSE_FAILED" << std::endl;
+      msg = "UpdateError::ERROR_CONFIG_PARSE_FAILED";
       break;
     case static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID):
-      std::cerr << "UpdateError::ERROR_INVALID_DEVICE_ID" << std::endl;
+      msg = "UpdateError::ERROR_INVALID_DEVICE_ID";
       break;
     case static_cast<int>(UpdateError::ERROR_FAILED_TO_GET_GPIO):
-      std::cerr << "UpdateError::ERROR_FAILED_TO_GET_GPIO" << std::endl;
+      msg = "UpdateError::ERROR_FAILED_TO_GET_GPIO";
       break;
     case 0:
-      std::cerr << "Update Was Successful" << std::endl;
+      msg = "Update was successful";
       break;
     default:
-      std::cerr << "Invalid error code" << std::endl;
+      msg = "UpdateError::Invalid Error code";
       break;
     }
+    std::cerr << msg.c_str() << std::endl;
+    log<level::ERR>(msg.c_str());
   }
 
+  /*
+  * enum list for all possible error codes
+  */
   enum class UpdateError {
     ERROR_LOAD_IMAGE = 1,
     ERROR_ENABLE_ARB = 2,
@@ -196,14 +237,20 @@ public:
   };
 
 protected:
-  int bus;
-  int address;
-  bool arb;
-  char *imageName;
-  char *image;
-  int imageSize;
-  int fd;
+  int bus; //i2 bus number
+  int address; //i2c address
+  bool arb; //is arbitrator needed?
+  char *imageName; //path to image file
+  char *image; //pointer to the image read in the memory
+  int imageSize; //size of the image in the memory
+  int fd; //image file descriptor
+  const int arbTrials = 5; //how many times to try to change arb state
 
+  /*
+  * readSysFs: the method will read and return a number from sysfs file
+  * inputs:
+  * path - path to the file to read from
+  */
   int readSysFs(std::string path) {
     int ret = 0;
     std::string s;
@@ -220,6 +267,13 @@ protected:
     return ret;
   }
 
+  /*
+  * writeSysFs: the method will write a number to sysfs file
+  * inputs:
+  * path - path to the file to write to
+  * value - the value to write
+  */
+
   int writeSysFs(std::string path, int value)
   {
     std::ofstream f(path.c_str());
@@ -230,6 +284,19 @@ protected:
     return 0;
   }
 
+  /*
+  * enableArbitration:handling access to the Dragon arbitrator.
+  * Dragon arbitrator is implemented in the kernel driver and is based of Dragon CPLD
+  * specification. There is a dance with gpio's between the BMC and the CPLD.
+  * In order to get access to the i2c bus the BMC must assert the gpio and CPLD
+  * responds by asserting another gpio. It is possible for the BMC to hold the bus
+  * for extended period of time by asserting the flag to the driver. The driver will
+  * automatically pet the watchdog to the CPLD if necessary. this is enabled by writing
+  * to the specific sysfs handle. Arbitrator has timeoue of 20 minutes in case the BMC
+  * is stuck and the driver is still petting the watchdog
+  * inputs:
+  * enable - enable/disable boolean flag
+*/
   int enableArbitration(bool enable) {
     int ret = 0;
     int error = static_cast<int>(UpdateError::ERROR_DISABLE_ARB);
@@ -260,7 +327,7 @@ protected:
           goto end;
         }
         cnt++;
-      } while (value != valueToWrite && cnt < 5);
+      } while (value != valueToWrite && cnt < arbTrials);
 
       if (value != valueToWrite) {
         ret = error;
@@ -271,10 +338,18 @@ protected:
     return ret;
   }
 
+  /*
+   * loadImage - loads image from imageName to image and set imageSize
+  */
   int loadImage() {
     int loadFd = 0;
     struct stat st;
     int ret = 0;
+
+    if (!imageName) {
+      ret = static_cast<int>(UpdateError::ERROR_OPEN_IMAGE);
+      goto end;
+    }
 
     loadFd = open(imageName, O_RDONLY);
     if (loadFd < 0) {
@@ -282,7 +357,11 @@ protected:
       goto end;
     }
 
-    stat(imageName, &st);
+    ret = stat(imageName, &st);
+    if (ret) {
+      ret = static_cast<int>(UpdateError::ERROR_STAT_IMAGE);
+      goto close;
+    }
     imageSize = st.st_size;
     if (imageSize <= 0) {
       ret = static_cast<int>(UpdateError::ERROR_STAT_IMAGE);
@@ -304,13 +383,23 @@ protected:
     return ret;
   }
 
+  /*
+  * sendData: sends data over i2c bus by using parent class methods
+  * inputs:
+  * send_fd - file descriptor for the i2c bus
+  * send_addr - i2c address to send data to
+  * data - pointer to data to send
+  * length - length of data to send
+  * error - which error should be returned in case of failure
+  * returns: 0 for success, error code if failure
+  */
   int sendData(int send_fd, int send_addr, uint8_t *data, int length, int error) {
-	uint8_t *dataWithPec =
+	  uint8_t *dataWithPec =
         static_cast<uint8_t *>(malloc((length + 1) * sizeof(uint8_t)));
 
-	if (!dataWithPec)
-		return error;
-	memcpy(dataWithPec, data, length);
+    if (!dataWithPec)
+      return error;
+    memcpy(dataWithPec, data, length);
     int ret = calculate_PEC(dataWithPec, address, length);
 
     if (ret) {
@@ -324,10 +413,13 @@ protected:
       goto end;
     }
 
-  end:
-	free(dataWithPec);
+    end:
+    free(dataWithPec);
     return ret;
   }
 
+  /*
+  * sendImage - virtual mehtod that will send the data to the target
+  */
   virtual int sendImage() = 0;
 };

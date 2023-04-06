@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2023 Nvidia Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include "dragonDeltaPsu.hpp"
 
 #include <i2c/smbus.h>
@@ -28,6 +44,7 @@ DragonDeltaPsu::~DragonDeltaPsu() {}
 
 int DragonDeltaPsu::unlock() {
   char read[6] = {0};
+  //to unlock PSU the fw identifier will be sent per PSU specification
   int ret = sendData(fd, address, fwIdent, 14,
                      static_cast<int>(UpdateError::ERROR_UNLOCK));
   if (ret)
@@ -46,6 +63,7 @@ end:
 }
 
 int DragonDeltaPsu::erase() {
+  //erase command per PSU specification
   uint8_t cmd[4] = {0xf3, 0x01, 0x00};
   return sendData(fd, address, cmd, 3,
                   static_cast<int>(UpdateError::ERROR_ERASE));
@@ -54,6 +72,7 @@ int DragonDeltaPsu::erase() {
 int DragonDeltaPsu::sendCrc(uint16_t crc, uint16_t blockSize) {
   uint8_t cmd[7];
 
+  //send crc command per PSU specification
   cmd[0] = 0xf4;
   cmd[1] = 4;
   cmd[2] = blockSize & 0xff;
@@ -118,6 +137,8 @@ end:
 }
 
 int DragonDeltaPsu::activate() {
+
+  //activate command per PSU specification
   uint8_t cmd[3] = {0x01, 0x00};
   char read[6] = {0};
   int ret = sendData(fd, address, cmd, 2,
@@ -138,6 +159,7 @@ end:
 }
 
 int DragonDeltaPsu::checkStatus(char *read) {
+  //check status command per PSU specification
   char write = 0xf1;
 
   return transfer(fd, 1, address, (uint8_t *)&write, (uint8_t *)read, 1, 5);

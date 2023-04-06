@@ -3,6 +3,7 @@
 #endif
 
 #include "libcpld.h"
+#define MAX_I2C_BUS_NUMBER 42
 
 const char* DEFAULT_VERSION = "Unknown";
 int debug_l;
@@ -12,7 +13,7 @@ char *configFile = NULL;
 
 int checkDigit(char *str) {
   unsigned int i;
-  if (atoi(str) > 42)
+  if (atoi(str) > MAX_I2C_BUS_NUMBER)
     return 1;
 
   for (i = 0; i < strlen(str); i++) {
