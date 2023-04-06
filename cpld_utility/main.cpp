@@ -1,4 +1,7 @@
+#ifdef DRAGON_CHASSIS
 #include "dragonCpld.hpp"
+#endif
+
 #include "libcpld.h"
 
 const char* DEFAULT_VERSION = "Unknown";
@@ -74,11 +77,14 @@ int main(int argc, char *argv[]) {
     ret = flash_remote_mb_fpga_image(bus, image_sel, image, &flashing_progress,
                                      cpld0);
   } else if (cpldDeviceSelection == 2) {
+#ifdef DRAGON_CHASSIS
     if (argc > 6) {
       DragonCpld dp(bus, image, configFile);
       ret = dp.fwUpdate();
       dp.printError(ret);
-    } else {
+    } else
+#endif
+    {
       ret = flash_remote_mid_fpga_image(bus, image_sel, image,
                                         &flashing_progress, cpld1);
     }
