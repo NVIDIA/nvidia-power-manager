@@ -1,2 +1,3 @@
-option('dragon_chassis', type: 'feature', value: 'disabled', description: 'Add Dragon PSU update into the build')
+option('dragon_chassis_psu', type: 'feature', value: 'disabled', description: 'Add Dragon PSU update into the build')
+option('dragon_chassis_cpld', type: 'feature', value: 'disabled', description: 'Add Dragon CPLD update into the build')
 option('tests', type: 'feature', value: 'enabled', description: 'Build tests.',)

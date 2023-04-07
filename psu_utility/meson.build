@@ -4,7 +4,7 @@ fmt = dependency('fmt')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 phosphor_logging = dependency('phosphor-logging')
 
-if get_option('dragon_chassis').enabled()
+if get_option('dragon_chassis_psu').enabled()
 	dragonSources = [
 		'dragonChassisPsuUpdate.cpp',
 		'dragonChassisBasePsu.cpp',
