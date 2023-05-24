@@ -11,6 +11,8 @@ using namespace phosphor::logging;
 
 namespace nvidia::power::manager {
 
+constexpr auto MODULE_OBJ_PATH_PREFIX = "ProcessorModule_";
+
 struct PowerCappingInfo {
   uint8_t revision{0x01};
   uint8_t mode{0x01};
@@ -22,6 +24,9 @@ struct PowerCappingInfo {
   uint32_t restOfSystemPower{3300};
   uint8_t reserved[5]{};
   uint8_t checksum{0};
+  uint32_t modulePowerLimit[MODULE_NUM];
+  uint32_t modulePowerLimit_Min[MODULE_NUM];
+  uint32_t modulePowerLimit_Max[MODULE_NUM];
 } __attribute__((packed));
 
 struct NotSupportedInCurrentMode final
@@ -105,13 +110,31 @@ public:
    * @param[in] Jsondata - interface object
    * @param[in] powerCappingInfo - power capping structure
    */
+  template <typename PropertyChangeCallback>
   Property(sdbusplus::bus::bus &bus,
            std::shared_ptr<sdbusplus::asio::dbus_interface> enabledInterface,
            nlohmann::json Jsondata, PowerCappingInfo &powerCappingInfo,
-           std::string module)
+           std::string module, PropertyChangeCallback &&propertyChangeFunc)
       : Bus(bus), iface(enabledInterface), propJson(Jsondata),
         powerCapInfo(powerCappingInfo), powerModule(module) {
     propertyname = propJson["propertyName"];
+    std::string path = iface->get_object_path();
+
+    //  get the index of the module or chassis
+    std::size_t found = path.find_last_of("/");
+    int index = -1;
+    std::string file;
+    // the object path starts with ProcessorModule_{instance_id}
+    // so we can get the module index where index is 0 based.
+    if (found != std::string::npos) {
+      file = path.substr(found + 1);
+      found = file.find_first_of("_");
+    }
+    if (found != std::string::npos) {
+      std::string num = file.substr(found + 1, 1);
+      index = std::stoi(num);
+    }
+
     if (propertyname == "PowerCap") {
       if (powerModule == "System") {
         if (static_cast<PowerMode>(powerCapInfo.mode) == OEM) {
@@ -122,25 +145,30 @@ public:
                    MaximumPerformance) {
           _value = powerCapInfo.chassisPowerLimit_P;
         }
+      } else if (powerModule == "Module" && index >= 0) {
+        _value = powerCapInfo.modulePowerLimit[index];
       } else {
         _value = propJson["value"];
       }
+      // only currentChassisLimit has minPowerCapValue property
+    } else if (propertyname == "MinPowerCapValue" && index >= 0) {
+      _value = powerCapInfo.modulePowerLimit_Min[index];
     } else if (propertyname == "MinPowerCapValue") {
       _value = powerCapInfo.chassisPowerLimit_Min;
+      // maxPowerCapValue property are under three object paths,
+      // CurrentChassisLimit, ChassisPowerLimitQ, ChassisPowerLimitP
     } else if (propertyname == "MaxPowerCapValue" &&
-               iface->get_object_path() ==
-                   "/xyz/openbmc_project/control/power/CurrentChassisLimit") {
+               file == "CurrentChassisLimit") {
       _value = powerCapInfo.chassisPowerLimit_Max;
+    } else if (propertyname == "MaxPowerCapValue" && index >= 0 &&
+               file.find(MODULE_OBJ_PATH_PREFIX) != std::string::npos) {
+      _value = powerCapInfo.modulePowerLimit_Max[index];
     } else if (propertyname == "PowerMode") {
       _mode = static_cast<PowerMode>(powerCapInfo.mode);
 
-    } else if (propertyname == "MaxPowerCapValue" &&
-               iface->get_object_path() ==
-                   "/xyz/openbmc_project/control/power/ChassisLimitQ") {
+    } else if (propertyname == "MaxPowerCapValue" && file == "ChassisLimitQ") {
       _value = powerCapInfo.chassisPowerLimit_Q;
-    } else if (propertyname == "MaxPowerCapValue" &&
-               iface->get_object_path() ==
-                   "/xyz/openbmc_project/control/power/ChassisLimitP") {
+    } else if (propertyname == "MaxPowerCapValue" && file == "ChassisLimitP") {
       _value = powerCapInfo.chassisPowerLimit_P;
     } else if (propertyname == "Value") {
       _value = powerCapInfo.restOfSystemPower;
@@ -151,7 +179,7 @@ public:
           propJson["flags"]) {
         iface->register_property(
             propertyname, convertPowerModeToString(_mode),
-            [this](const auto &newPropertyValue, const auto &) {
+            [this, propertyChangeFunc](const auto &newPropertyValue, const auto &) {
               auto mode = convertStringToPowerMode(newPropertyValue);
               if (mode == Invalid) {
                 throw sdbusplus::exception::InvalidEnumString();
@@ -161,6 +189,7 @@ public:
                   _mode = mode;
                   iface->signal_property(propertyname);
                   powerCapInfo.mode = _mode;
+                  propertyChangeFunc(newPropertyValue);
                 }
               }
 
@@ -176,24 +205,36 @@ public:
           propJson["flags"]) {
         iface->register_property(
             propertyname, _value,
-            [this](const auto &newPropertyValue, const auto &) {
-                if (_value != newPropertyValue) {
-                  if (newPropertyValue <= powerCapInfo.chassisPowerLimit_Max &&
-                      newPropertyValue >= powerCapInfo.chassisPowerLimit_Min) {
-                    _value = newPropertyValue;
-                    powerCapInfo.currentPowerLimit = _value;
-                    iface->signal_property(propertyname);
-                    if (static_cast<PowerMode>(powerCapInfo.mode) != OEM) {
-                      powerCapInfo.mode = static_cast<int>(OEM);
-                    }
+            [this, index, propertyChangeFunc](const auto &newPropertyValue,
+                                              const auto &) {
+              auto maxValue = powerCapInfo.chassisPowerLimit_Max;
+              auto minValue = powerCapInfo.chassisPowerLimit_Min;
+              if (index >= 0) {
+                maxValue = powerCapInfo.modulePowerLimit_Max[index];
+                minValue = powerCapInfo.modulePowerLimit_Min[index];
+              }
+              if (_value != newPropertyValue) {
+                if (newPropertyValue <= maxValue &&
+                    newPropertyValue >= minValue) {
+                  _value = newPropertyValue;
+                  if (index >= 0) {
+                    powerCapInfo.modulePowerLimit[index] = _value;
                   } else {
-                    std::cerr
-                        << "Current Chassis Limit value should be between "
-                        << powerCapInfo.chassisPowerLimit_Max << "-"
-                        << powerCapInfo.chassisPowerLimit_Min << std::endl;
-                    throw ChassisLimitOutOfRange();
+                    powerCapInfo.currentPowerLimit = _value;
                   }
+                  iface->signal_property(propertyname);
+                  if (static_cast<PowerMode>(powerCapInfo.mode) != OEM) {
+                    powerCapInfo.mode = static_cast<int>(OEM);
+                  }
+                  // we can handle the property value here and don't need to
+                  // watch the change signal in the same service.
+                  propertyChangeFunc(_value);
+                } else {
+                  std::cerr << "Current Chassis Limit value should be between "
+                            << maxValue << "-" << minValue << std::endl;
+                  throw ChassisLimitOutOfRange();
                 }
+              }
               return 0;
             },
             [this](const auto &) { return _value; });

@@ -190,16 +190,35 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
       chassisObjectPath = getSystemChassisObjectPath();
       for (const auto &jsonData1 : jsonData0["property"]) {
         if (jsonData1["propertyName"] == "Associations") {
-          associationObj =
-              std::make_unique<associationObject>(bus, objectPath.c_str());
           std::vector<std::tuple<std::string, std::string, std::string>>
               association;
-          association.emplace_back(
-              std::make_tuple("chassis", "power_controls", chassisObjectPath));
-          associationObj->associations(association);
+          std::string str = jsonData1["value"]; 
+          if (str.find_first_not_of(" ") == std::string::npos) {
+            association.emplace_back(std::make_tuple(
+                "chassis", "power_controls", chassisObjectPath));
+          } else {
+            std::vector<std::string> out;
+
+            // tokenize the string
+            std::string s;
+            std::string input(jsonData1["value"]);
+            std::stringstream ss(input);
+            while (std::getline(ss, s, ' ')) {
+              out.push_back(s);
+            }
+            association.emplace_back(std::make_tuple(out[0], out[1], out[2]));
+          }
+          interface->register_property(
+              "Associations", association,
+              sdbusplus::asio::PropertyPermission::readOnly);
         } else {
+          auto path = jsonData0["objectName"];
+          auto iface = jsonData0["interfaceName"];
           auto propertyObj = std::make_unique<property::Property>(
-              bus, interface, jsonData1, powerCappingInfo, Module);
+              bus, interface, jsonData1, powerCappingInfo, Module,
+              [this, iface, path](std::variant<uint32_t, std::string, nvidia::power::manager::property::PowerMode> var) {
+                this->PropertyTriggered(iface, path, var);
+              });
           PowerManager::propertyObjs.emplace_back(std::move(propertyObj));
         }
 
@@ -209,19 +228,6 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
       interface->initialize();
 
       enabledInterface.emplace_back(std::move(interface));
-    }
-    for (const auto &jsonData0 : JsonConfigData["powerCappingConfigs"]) {
-      for (const auto &jsonData1 : jsonData0["property"]) {
-
-        if (jsonData1.contains("action")) {
-          auto matchEventObj = std::make_unique<sdbusplus::bus::match_t>(
-              bus,
-              sdbusplus::bus::match::rules::propertiesChanged(
-                  jsonData0["objectName"], jsonData0["interfaceName"]),
-              [this](auto &msg) { this->PropertyTriggered(msg); });
-          matchEvent.emplace_back(std::move(matchEventObj));
-        }
-      }
     }
     auto matchEventObj = std::make_unique<sdbusplus::bus::match_t>(
         bus,
@@ -366,25 +372,45 @@ void PowerManager::updatePowerCappingStructure() {
     for (const auto &jsonData0 : JsonConfigData["powerCappingConfigs"]) {
       for (const auto &jsonData1 : jsonData0["property"]) {
         std::string propertyname = jsonData1["propertyName"];
-        if (propertyname == "PowerCap") {
+
+        std::string path(jsonData0["objectName"]);
+
+        //  get the index of the module or chassis
+        std::size_t found = path.find_last_of("/");
+        int index = -1;
+        std::string file;
+        // the object path starts with ProcessorModule_{instance_id}
+        // so we can get the module index where index is 0 based.
+        if (found != std::string::npos) {
+          file = path.substr(found + 1);
+          found = file.find_first_of("_");
+        }
+        if (found != std::string::npos) {
+          std::string num = file.substr(found + 1, 1);
+          index = std::stoi(num);
+        }
+
+        if (propertyname == "PowerCap" && index >= 0) {
+          powerCappingInfo.modulePowerLimit[index] = jsonData1["value"];
+        } else if (propertyname == "PowerCap") {
           powerCappingInfo.currentPowerLimit = jsonData1["value"];
-        } else if (propertyname == "MinPowerCapValue" &&
-                   jsonData0["objectName"] == "/xyz/openbmc_project/control/"
-                                              "power/CurrentChassisLimit") {
+        } else if (propertyname == "MinPowerCapValue" && index >= 0) {
+          powerCappingInfo.modulePowerLimit_Min[index] = jsonData1["value"];
+        } else if (propertyname == "MinPowerCapValue") {
           powerCappingInfo.chassisPowerLimit_Min = jsonData1["value"];
-        } else if (propertyname == "MaxPowerCapValue" &&
-                   jsonData0["objectName"] == "/xyz/openbmc_project/control/"
-                                              "power/CurrentChassisLimit") {
-          powerCappingInfo.chassisPowerLimit_Max = jsonData1["value"];
         } else if (propertyname == "PowerMode") {
           powerCappingInfo.mode = jsonData1["value"].get<property::PowerMode>();
         } else if (propertyname == "MaxPowerCapValue" &&
-                   jsonData0["objectName"] ==
-                       "/xyz/openbmc_project/control/power/ChassisLimitQ") {
+                   file == "CurrentChassisLimit") {
+          powerCappingInfo.chassisPowerLimit_Max = jsonData1["value"];
+        } else if (propertyname == "MaxPowerCapValue" && index >= 0 &&
+                   file.find(MODULE_OBJ_PATH_PREFIX) != std::string::npos) {
+          powerCappingInfo.modulePowerLimit_Max[index] = jsonData1["value"];
+        } else if (propertyname == "MaxPowerCapValue" &&
+                   file == "ChassisLimitQ") {
           powerCappingInfo.chassisPowerLimit_Q = jsonData1["value"];
         } else if (propertyname == "MaxPowerCapValue" &&
-                   jsonData0["objectName"] ==
-                       "/xyz/openbmc_project/control/power/ChassisLimitP") {
+                   file == "ChassisLimitP") {
           powerCappingInfo.chassisPowerLimit_P = jsonData1["value"];
         } else if (propertyname == "Value") {
           powerCappingInfo.restOfSystemPower = jsonData1["value"];
@@ -590,6 +616,18 @@ void PowerManager::getDataForAppend(nlohmann::json dataJson,
         methodObj.append(data);
       }
     } break;
+    case DBUSTYPE_DICT:
+      if (dataJson["data"].type() == json::value_t::array) {
+        std::vector<std::map<std::string, std::string>> dict = dataJson["data"];
+        std::map<std::string, std::string> appendMsg;
+        for (auto item : dict) {
+          for (auto i : item) {
+            appendMsg[i.first] = i.second;
+          } 
+        }
+        methodObj.append(appendMsg);
+      }
+      break;
     default:
       std::cout << "unknown data type" << std::endl;
     }
@@ -800,58 +838,54 @@ void PowerManager::oemKeyHandler(sdbusplus::message::message &methodObj,
   }
 }
 
-void PowerManager::PropertyTriggered(sdbusplus::message::message &msg) {
+void PowerManager::PropertyTriggered(
+    std::string iface, std::string path,
+    std::variant<uint32_t, std::string,
+                 nvidia::power::manager::property::PowerMode>
+        var) {
   try {
-    std::string msgInterface;
-    std::map<std::string, std::variant<uint32_t, std::string>> msgData;
-    msg.read(msgInterface, msgData);
-
     for (const auto &jsonData0 : JsonConfigData["powerCappingConfigs"]) {
-      if (jsonData0["interfaceName"] == msgInterface &&
-          jsonData0["objectName"] == msg.get_path()) {
+      if (jsonData0["interfaceName"] == iface &&
+          jsonData0["objectName"] == path) {
         for (const auto &jsonData1 : jsonData0["property"]) {
-          auto valPropMap = msgData.find(jsonData1["propertyName"]);
-          if (valPropMap != msgData.end()) {
-            if (jsonData1["propertyName"] == "PowerMode") {
-              std::string state = std::get<std::string>(valPropMap->second);
-              updatePowerCapPropertyValue(state);
-              if (jsonData1.contains("action")) {
-                for (const auto &jsonData2 : jsonData1["action"]) {
-                  if ((!jsonData2.contains("trigger")) ||
-                      (jsonData2["trigger"] == state)) {
-                    if (jsonData2.contains("conditionBlock")) {
-                      auto conditionSuccess = true;
-                      conditionSuccess = executeConditionBlock(jsonData2);
-                      if (conditionSuccess == false) {
-                        continue;
-                      }
+          if (jsonData1["propertyName"] == "PowerMode") {
+            std::string state = std::get<std::string>(var);
+            updatePowerCapPropertyValue(state);
+            if (jsonData1.contains("action")) {
+              for (const auto &jsonData2 : jsonData1["action"]) {
+                if ((!jsonData2.contains("trigger")) ||
+                    (jsonData2["trigger"] == state)) {
+                  if (jsonData2.contains("conditionBlock")) {
+                    auto conditionSuccess = true;
+                    conditionSuccess = executeConditionBlock(jsonData2);
+                    if (conditionSuccess == false) {
+                      continue;
                     }
-                    std::string propertyName = jsonData1["propertyName"];
-                    executeActionBlock<std::string>(jsonData2, propertyName,
-                                                    state);
                   }
+                  std::string propertyName = jsonData1["propertyName"];
+                  executeActionBlock<std::string>(jsonData2, propertyName,
+                                                  state);
                 }
               }
-            } else {
-              uint32_t state = std::get<uint32_t>(valPropMap->second);
-              if (jsonData0["module"] == "System") {
-                updatePowerCappingLimit(true);
-              }
-              if (jsonData1.contains("action")) {
-                for (const auto &jsonData2 : jsonData1["action"]) {
-                  if ((!jsonData2.contains("trigger")) ||
-                      (jsonData2["trigger"] == state)) {
-                    if (jsonData2.contains("conditionBlock")) {
-                      auto conditionSuccess = true;
-                      conditionSuccess = executeConditionBlock(jsonData2);
-                      if (conditionSuccess == false) {
-                        continue;
-                      }
+            }
+          } else {
+            uint32_t state = std::get<uint32_t>(var);
+            if (jsonData0["module"] == "System") {
+              updatePowerCappingLimit(true);
+            }
+            if (jsonData1.contains("action")) {
+              for (const auto &jsonData2 : jsonData1["action"]) {
+                if ((!jsonData2.contains("trigger")) ||
+                    (jsonData2["trigger"] == state)) {
+                  if (jsonData2.contains("conditionBlock")) {
+                    auto conditionSuccess = true;
+                    conditionSuccess = executeConditionBlock(jsonData2);
+                    if (conditionSuccess == false) {
+                      continue;
                     }
-                    std::string propertyName = jsonData1["propertyName"];
-                    executeActionBlock<uint32_t>(jsonData2, propertyName,
-                                                 state);
                   }
+                  std::string propertyName = jsonData1["propertyName"];
+                  executeActionBlock<uint32_t>(jsonData2, propertyName, state);
                 }
               }
             }

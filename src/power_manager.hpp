@@ -1,7 +1,5 @@
 #pragma once
 #include "power_manager_property.hpp"
-#include <xyz/openbmc_project/Association/Definitions/server.hpp>
-#include <xyz/openbmc_project/Association/server.hpp>
 using namespace phosphor::logging;
 
 namespace nvidia::power::manager {
@@ -16,6 +14,7 @@ namespace nvidia::power::manager {
 #define DBUSTYPE_BYTE 'y'
 #define DBUSTYPE_STRING 's'
 #define DBUSTYPE_BOOL 'b'
+#define DBUSTYPE_DICT 'e'
 
 using Value =
     std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
@@ -24,10 +23,6 @@ using Value =
                  std::vector<int32_t>, std::vector<uint32_t>,
                  std::vector<int64_t>, std::vector<uint64_t>,
                  std::vector<double>, std::vector<std::string>>;
-
-using associationObject = sdbusplus::server::object::object<
-    sdbusplus::xyz::openbmc_project::Association::server::Definitions,
-    sdbusplus::xyz::openbmc_project::server::Association>;
 
 /**
  * @class PowerManager
@@ -94,7 +89,6 @@ private:
    * Properties */
   std::vector<std::unique_ptr<property::Property>> propertyObjs;
 
-  std::unique_ptr<associationObject> associationObj;
 
   /** @brief Used to subscribe to D-Bus power state changes */
   std::unique_ptr<sdbusplus::bus::match_t> currentPowerState;
@@ -152,9 +146,13 @@ private:
    * when the function call back is called it go through the json data and
    * perform the Action blocks defined in the powermanager.json
    *
-   * @param[in] msg - Data associated with the state signal
+   * @param[in] iface - D-Bus interface name
+   * @param[in] path - D-Bus object path name
+   * @param[in] var - The configured data 
    */
-  void PropertyTriggered(sdbusplus::message::message &msg);
+  void PropertyTriggered(std::string iface, std::string path,
+                         std::variant<uint32_t, std::string, nvidia::power::manager::property::PowerMode > var);
+
   /**
    * @brief Callback for power state changes
    *
