@@ -23,7 +23,7 @@
 #define DONE_BIT (1 << 8)
 #define CONF_BITS ((1 << 23) | (1 << 24) | (1 << 25))
 #define PAGE_SIZE 16
-#define REFRESH_GPIO_NAME "CPLD_REFRESH_DONE-I"
+#define REFRESH_GPIO_NAME "CPLD_REFRESH_IN_PRGRS_L-I"
 
 DragonCpld::DragonCpld(int updateBus, char *imageName,
                        const char *config)
