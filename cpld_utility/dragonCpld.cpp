@@ -368,8 +368,9 @@ int DragonCpld::loadConfig() {
       if (!cpldRefreshGpio)
         return static_cast<int>(UpdateError::ERROR_FAILED_TO_GET_GPIO);
       try {
-          cpldRefreshGpio.request({"cpldUpdate",
-                                  gpiod::line_request::DIRECTION_INPUT, {}});
+        gpiod::line_request request{"cpldUpdate", gpiod::line_request::DIRECTION_INPUT, 0};
+        request.flags = gpiod::line_request::FLAG_ACTIVE_LOW;
+        cpldRefreshGpio.request(request);
       } catch (const std::exception &e) {
         return static_cast<int>(UpdateError::ERROR_FAILED_TO_GET_GPIO);
       }
