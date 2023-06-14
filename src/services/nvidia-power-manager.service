@@ -1,7 +1,7 @@
 [Unit]
 Description=NVIDIA power manager service
 Requires=nvidia-psu-monitor.service
-After=xyz.openbmc_project.EntityManager.service
+After=mapper-wait@-xyz-openbmc_project-state-chassis0.service xyz.openbmc_project.EntityManager.service
 [Service]
 Restart=always
 Type=dbus
