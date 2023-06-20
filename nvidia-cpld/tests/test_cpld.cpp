@@ -56,12 +56,13 @@ TEST(CpldTest, CpldTestDbus)
     std::vector<std::string> assetNames = {"Manufacturer", "Model", "PartNumber", "SerialNumber"};
     std::vector<std::string> versionNames = {"Purpose", "SoftwareId",
                                              "Version"};
+    std::vector<std::string> operationalStatusNames = {"Functional", "State"};
 
     sdbusMockExpectPropertyChangeMultiple(sdbus_mock, path, "xyz.openbmc_project.Inventory.Item", itemNames);
     sdbusMockExpectPropertyChangeMultiple(
         sdbus_mock, path, "xyz.openbmc_project.Inventory.Decorator.Asset",
         assetNames);
-    sdbusMockExpectPropertyChanged(sdbus_mock, path, "xyz.openbmc_project.State.Decorator.OperationalStatus", "Functional");
+    sdbusMockExpectPropertyChangeMultiple(sdbus_mock, path, "xyz.openbmc_project.State.Decorator.OperationalStatus", operationalStatusNames);
     sdbusMockExpectPropertyChanged(sdbus_mock, path, "xyz.openbmc_project.Inventory.Item.Chassis", "Type");
     sdbusMockExpectPropertyChangeMultiple(
         sdbus_mock, swpath, "xyz.openbmc_project.Software.Version",

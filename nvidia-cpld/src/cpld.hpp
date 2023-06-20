@@ -118,6 +118,9 @@ class Cpld : public CpldInherit, public Util
             "Cpld " + name);
         sdbusplus::xyz::openbmc_project::State::Decorator::server::
             OperationalStatus::functional(true);
+        sdbusplus::xyz::openbmc_project::State::Decorator::server::
+            OperationalStatus::state(sdbusplus::xyz::openbmc_project::State::Decorator::server::
+            OperationalStatus::StateType::Enabled);
         auto chassisType =
             sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis::
                 convertChassisTypeFromString("xyz.openbmc_project.Inventory."
