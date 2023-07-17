@@ -240,10 +240,12 @@ protected:
   int bus; //i2 bus number
   int address; //i2c address
   bool arb; //is arbitrator needed?
+  bool rawLattice; //are we directly talking to Lattice part?
   char *imageName; //path to image file
   char *image; //pointer to the image read in the memory
   int imageSize; //size of the image in the memory
   int fd; //image file descriptor
+  std::array<uint8_t, 4> deviceIdArray;
   const int arbTrials = 5; //how many times to try to change arb state
 
   /*

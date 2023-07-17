@@ -32,7 +32,7 @@ DragonCpld::DragonCpld(int updateBus, char *imageName,
 {}
 
 DragonCpld::~DragonCpld() {
-  if (!arb && cpldRefreshGpio)
+  if (!arb && !rawLattice && cpldRefreshGpio)
     cpldRefreshGpio.reset();
 }
 
@@ -124,12 +124,11 @@ int DragonCpld::waitBusy(int wait, int errorCode) {
 
 int DragonCpld::readDeviceId() {
   uint8_t cmd[] = {0xe0, 0x00, 0x00, 0x00}; //read device id command from Lattice specification
-  uint8_t id[] = {0x61, 0x2b, 0xb0, 0x43}; //device id supported
   uint8_t dev_id[5];
 
   transfer(fd, 1, address, (uint8_t *)cmd, dev_id, 4, 4);
   for (int i = 0; i < 4;i++)
-    if (id[i] != dev_id[i])
+    if (deviceIdArray[i] != dev_id[i])
       return static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID);
   return 0;
 }
@@ -284,20 +283,22 @@ int DragonCpld::activate() {
   int ret = 0;
   int rawBusFd = 0;
 
-  ret = sendData(cpldRegFd, cpldRegAddress, cmd1, 2,
-                 static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG1));
-  if (ret)
-    goto end;
-  ret = sendData(cpldRegFd, cpldRegAddress, cmd2, 2,
+  if (!rawLattice)
+  {
+    ret = sendData(cpldRegFd, cpldRegAddress, cmd1, 2,
+                   static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG1));
+    if (ret)
+      goto end;
+    ret = sendData(cpldRegFd, cpldRegAddress, cmd2, 2,
                  static_cast<int>(UpdateError::ERROR_ACTIVATE_CPLD_REG2));
-  if (ret)
-    goto end;
-  sleep(1);
+    if (ret)
+      goto end;
+    sleep(1);
 
-  ret = waitRefresh(1);
-  if (ret)
-    goto end;
-
+    ret = waitRefresh(1);
+    if (ret)
+      goto end;
+  }
   rawBusFd = openBus(cpldRawBus);
   if (rawBusFd < 0) {
     ret = static_cast<int>(UpdateError::ERROR_OPEN_BUS);
@@ -309,11 +310,18 @@ int DragonCpld::activate() {
     ret = static_cast<int>(UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED);
     goto closeBus;
   }
-
-  ret = waitRefresh(0);
-  if (ret)
-    goto closeBus;
-
+  if (!rawLattice)
+  {
+    ret = waitRefresh(0);
+    if (ret)
+      goto closeBus;
+  }
+  else
+    //Lattice status register is broken on these devices
+    //we do not have reliable way to ping cpld to see if
+    //cmd completed correctly. give it 30 seconds to come
+    //back alive
+    sleep(30);
 closeBus:
   close(rawBusFd);
 end:
@@ -347,22 +355,27 @@ int DragonCpld::loadConfig() {
         arb = true;
       else
         arb = false;
+      rawLattice = cpldInfo.at("RawLattice").get<bool>();
       std::string busS = cpldInfo.at("Bus");
       int busN = stoi(busS);
       if (busN == bus) {
         std::string ad = cpldInfo.at("Address");
-		address = stoi(ad);
+        address = stoi(ad);
         std::string cpldRb = cpldInfo.at("CpldRegBus");
-		cpldRegBus = stoi(cpldRb);
+        cpldRegBus = stoi(cpldRb);
         std::string cpldRa = cpldInfo.at("CpldRegAddress");
         cpldRegAddress = stoi(cpldRa);
         std::string cpldRaB = cpldInfo.at("CpldRawBus");
         cpldRawBus = stoi(cpldRaB);
       }
+      for (size_t i = 0; i < deviceIdArray.size(); ++i) {
+        std::string hexValue = cpldInfo.at("DeviceId")[i];
+        deviceIdArray[i] = static_cast<uint8_t>(std::stoi(hexValue, 0, 16));
+      }
     } catch (const std::exception &e) {
       return static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED);
     }
-    if (!arb)
+    if (!arb && !rawLattice)
     {
       cpldRefreshGpio = gpiod::find_line(REFRESH_GPIO_NAME);
       if (!cpldRefreshGpio)
