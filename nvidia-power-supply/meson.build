@@ -14,6 +14,11 @@ cdata.set_quoted(
     'SW_INV_PATH', '/xyz/openbmc_project/software')
 cdata.set_quoted(
     'SOFTWARE_INTERFACE', 'xyz.openbmc_project.Software.Version')
+cdata.set_quoted(
+    'PSU_SENSOR_PATH', '/xyz/openbmc_project/sensors/system/chassis/motherboard')
+cdata.set_quoted(
+    'OBJ_MANAGER_PATH', '/xyz/openbmc_project/sensors')
+
 
 
 sdbusplus = dependency('sdbusplus')

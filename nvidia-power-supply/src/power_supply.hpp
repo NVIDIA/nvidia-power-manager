@@ -31,6 +31,13 @@ using PowerSupplyInherit = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::LocationCode,
     sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
 
+using PowerSupplySensorInherit = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::State::Decorator::server::
+        OperationalStatus,
+    sdbusplus::xyz::openbmc_project::State::Decorator::server::PowerState,
+    sdbusplus::xyz::openbmc_project::Inventory::server::Item,
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::PowerSupply>;
+
 using AssociationObject = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
 using VersionObject = sdbusplus::server::object::object<
@@ -66,6 +73,24 @@ class VersionInterface : public VersionObject
         version(fwversion);
         purpose(VersionPurpose::Other);
     }
+};
+
+/**
+ * @brief PowerSupplySensor for dbus
+ */
+class PowerSupplySensor : public PowerSupplySensorInherit
+{
+  public:
+    /**
+     * @brief Construct a new PowerSupplySensor object
+     *
+     * @param bus
+     * @param path
+     */
+    PowerSupplySensor(sdbusplus::bus::bus& bus, const std::string& path) :
+        PowerSupplySensorInherit(bus, path.c_str(),
+                                 action::emit_interface_added)
+    {}
 };
 
 /**
@@ -115,7 +140,8 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
                 const std::string& cmdUtilityName, const std::string& name,
                 const std::string& assoc) :
         PowerSupplyInherit(bus, (objPath).c_str()),
-        PSShellIntf(name, cmdUtilityName), bus(bus), inventoryPath(objPath)
+        PSShellIntf(name, cmdUtilityName), bus(bus), inventoryPath(objPath),
+        name(name)
     {
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::
             manufacturer(getManufacturer());
@@ -136,6 +162,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
         );
         registerAssociationInterface(bus, objPath);
         registerSoftwareVersion(bus, objPath);
+        registerSensorObject(bus, objPath);
 
         createAssociation(assoc);
     }
@@ -155,6 +182,22 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
             std::make_unique<Association>(bus, swpath, fwAssociation);
     }
 
+    void registerSensorObject(sdbusplus::bus::bus& bus,
+                              const std::string& ifPath)
+    {
+        std::string swpath = PSU_SENSOR_PATH;
+        swpath += "/" + std::filesystem::path(ifPath).filename().string();
+
+        PowerSupplySensorObj =
+            std::make_unique<PowerSupplySensor>(bus, swpath.c_str());
+        PowerSupplySensorObj->prettyName("Power Supply " + name);
+        PowerSupplySensorObj->present(true);
+        PowerSupplySensorObj->functional(true);
+        PowerSupplySensorObj->powerState(
+            sdbusplus::xyz::openbmc_project::State::Decorator::server::
+                PowerState::State::On);
+    }
+
     void registerSoftwareVersion(sdbusplus::bus::bus& bus,
                                               const std::string& ifPath)
     {
@@ -168,6 +211,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
     void updatePresence(bool present)
     {
         sdbusplus::xyz::openbmc_project::Inventory::server::Item::present(present);
+        PowerSupplySensorObj->present(present);
     }
 
     /**
@@ -201,8 +245,10 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
      *
      */
     std::string inventoryPath;
+    std::string name;
     std::unique_ptr<VersionInterface> VersionObj;
     std::unique_ptr<Association> AssociationObj;
+    std::unique_ptr<PowerSupplySensor> PowerSupplySensorObj;
     const std::string upFwdAssociation = "software_version";
     const std::string upRevAssociation = "updateable";
     const std::string purpose =

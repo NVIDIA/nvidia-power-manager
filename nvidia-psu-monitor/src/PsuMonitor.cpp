@@ -137,8 +137,13 @@ int PsuMonitor::update_status(const int32_t &detectNewVal,
     if ((detectNewVal != detectRegValue) || (initialize == 1)) {
 
       for (const auto &i : psus) {
-        udpateProperty(psuObjectPaths[i], INVENTORY_IFACE, present,
-                       !psuDetectNewArr[i]);
+        for (const auto &psuObjectPath : psuObjectPaths) {
+          if (psuObjectPath.find("powersupply" + std::to_string(i)) !=
+              std::string::npos) {
+            udpateProperty(psuObjectPath, INVENTORY_IFACE, present,
+                           !psuDetectNewArr[i]);
+          }
+        }
       }
       detectRegValue = detectNewVal;
     }
@@ -146,8 +151,13 @@ int PsuMonitor::update_status(const int32_t &detectNewVal,
     if ((alertRegValue != alertNewVal) || (initialize == 1)) {
 
       for (const auto &i : psus) {
-        udpateProperty(psuObjectPaths[i], powerStateIface, powerState,
-                       !psuAlertNewArr[i]);
+        for (const auto &psuObjectPath : psuObjectPaths) {
+          if (psuObjectPath.find("powersupply" + std::to_string(i)) !=
+              std::string::npos) {
+            udpateProperty(psuObjectPath, powerStateIface, powerState,
+                           !psuAlertNewArr[i]);
+          }
+        }
       }
       alertRegValue = alertNewVal;
     }
@@ -155,8 +165,13 @@ int PsuMonitor::update_status(const int32_t &detectNewVal,
     if ((workRegValue != workNewVal) || (initialize == 1)) {
 
       for (const auto &i : psus) {
-        udpateProperty(psuObjectPaths[i], operationalIface, functional,
-                       !psuWorkNewArr[i]);
+        for (const auto &psuObjectPath : psuObjectPaths) {
+          if (psuObjectPath.find("powersupply" + std::to_string(i)) !=
+              std::string::npos) {
+            udpateProperty(psuObjectPath, operationalIface, functional,
+                           !psuWorkNewArr[i]);
+          }
+        }
       }
       workRegValue = workNewVal;
     }
