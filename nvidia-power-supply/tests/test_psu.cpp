@@ -50,8 +50,8 @@ static void sdbusMockExpectPropertyChangeMultiple(sdbusplus::SdBusMock & sdbus_m
 /* ensure that the dbus entries we expect get filled in */
 TEST(PsuTest, PsuTestDbus)
 {
-    std::string path = "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply/PSU0";
-    std::string swpath = "/xyz/openbmc_project/software/PSU0";
+    std::string path = "/xyz/openbmc_project/sensors/motherboard/powersupply0";
+    std::string swpath = "/xyz/openbmc_project/sensors/motherboard";
     sdbusplus::SdBusMock sdbus_mock;
     auto bus_mock = sdbusplus::get_mocked_new(&sdbus_mock);
     std::vector<std::string> itemNames = {"Present", "PrettyName"};
