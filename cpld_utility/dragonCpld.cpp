@@ -347,6 +347,8 @@ int DragonCpld::loadConfig() {
   if (data.is_discarded())
     return static_cast<int>(UpdateError::ERROR_CONFIG_FORMAT);
 
+  bool found = false;
+
   for (const auto &cpldInfo : data.at("CPLD")) {
     try {
       std::string arbS = cpldInfo.at("Arbitration");
@@ -367,13 +369,14 @@ int DragonCpld::loadConfig() {
         cpldRegAddress = stoi(cpldRa);
         std::string cpldRaB = cpldInfo.at("CpldRawBus");
         cpldRawBus = stoi(cpldRaB);
+        found = true;
       }
       for (size_t i = 0; i < deviceIdArray.size(); ++i) {
         std::string hexValue = cpldInfo.at("DeviceId")[i];
         deviceIdArray[i] = static_cast<uint8_t>(std::stoi(hexValue, 0, 16));
       }
     } catch (const std::exception &e) {
-      return static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED);
+      continue;
     }
     if (!arb && !rawLattice)
     {
@@ -389,6 +392,9 @@ int DragonCpld::loadConfig() {
       }
     }
   }
+
+  if(!found)
+    return static_cast<int>(UpdateError::ERROR_CONFIG_PARSE_FAILED);
 
   return 0;
 }
