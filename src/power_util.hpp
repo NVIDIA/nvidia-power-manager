@@ -118,6 +118,14 @@ json loadJSONFromFile(const char *path);
  * @param[in] path - the absolute path for power cap binary file
  *
  */
+int dumpPowerCapIntoFile(const char *path, uint8_t *data, int length);
+
+/**
+ * @brief return power cap binary file size
+ *
+ * @param[in] path - the absolute path for power cap binary file
+ *
+ */
 uint8_t *loadPowerCapInfoFromFile(const char *path);
 /**
  * @brief dump a power cap structure to file
@@ -127,8 +135,7 @@ uint8_t *loadPowerCapInfoFromFile(const char *path);
  * @param[in] length - length of the data buffer
  *
  */
-int dumpPowerCapIntoFile(const char *path, uint8_t *data, int length);
-
+size_t getPowerCapFileLength(const char *path);
 } // namespace util
 } // namespace power
 } // namespace nvidia

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <tuple>
+#include <xyz/openbmc_project/Common/error.hpp>
 
 #include "power_util.hpp"
 #include <xyz/openbmc_project/Inventory/Decorator/Area/server.hpp>
@@ -12,7 +13,7 @@ using namespace phosphor::logging;
 
 namespace nvidia::power::manager {
 
-constexpr auto MODULE_OBJ_PATH_PREFIX = "ProcessorModule_";
+#define PLATFORM_NAME_MAX_SIZE  15
 
 struct PowerCappingInfo {
   uint8_t revision{0x01};
@@ -28,6 +29,7 @@ struct PowerCappingInfo {
   uint32_t modulePowerLimit[MODULE_NUM];
   uint32_t modulePowerLimit_Min[MODULE_NUM];
   uint32_t modulePowerLimit_Max[MODULE_NUM];
+  uint32_t modulePowerLimitPercentage[MODULE_NUM];
 } __attribute__((packed));
 
 struct NotSupportedInCurrentMode final
@@ -195,6 +197,8 @@ public:
       } else {
         _value = propJson["value"];
       }
+    } else if (propertyname == "PowerCapPercentage" && index >= 0) {
+      _value = powerCapInfo.modulePowerLimitPercentage[index];
       // only currentChassisLimit has minPowerCapValue property
     } else if (propertyname == "MinPowerCapValue" && index >= 0) {
       _value = powerCapInfo.modulePowerLimit_Min[index];
@@ -252,32 +256,76 @@ public:
             propertyname, _value,
             [this, index, propertyChangeFunc](const auto &newPropertyValue,
                                               const auto &) {
-              auto maxValue = powerCapInfo.chassisPowerLimit_Max;
-              auto minValue = powerCapInfo.chassisPowerLimit_Min;
-              if (index >= 0) {
-                maxValue = powerCapInfo.modulePowerLimit_Max[index];
-                minValue = powerCapInfo.modulePowerLimit_Min[index];
-              }
               if (_value != newPropertyValue) {
-                if (newPropertyValue <= maxValue &&
-                    newPropertyValue >= minValue) {
-                  _value = newPropertyValue;
+                if (propertyname == "PowerCap")
+                {
+                  auto maxValue = powerCapInfo.chassisPowerLimit_Max;
+                  auto minValue = powerCapInfo.chassisPowerLimit_Min;
                   if (index >= 0) {
-                    powerCapInfo.modulePowerLimit[index] = _value;
+                    maxValue = powerCapInfo.modulePowerLimit_Max[index];
+                    minValue = powerCapInfo.modulePowerLimit_Min[index];
+                  }
+                  if (newPropertyValue <= maxValue &&
+                      newPropertyValue >= minValue) {
+                    _value = newPropertyValue;
+                    if (index >= 0) {
+                      powerCapInfo.modulePowerLimit[index] = _value;
+                    } else {
+                      powerCapInfo.currentPowerLimit = _value;
+                    }
+                    iface->signal_property(propertyname);
+
+                    if (static_cast<PowerMode>(powerCapInfo.mode) != OEM) {
+                        powerCapInfo.mode = static_cast<int>(OEM);
+                    }
+                    // we can handle the property value here and don't need to
+                    // watch the change signal in the same service.
+                    propertyChangeFunc(_value);
                   } else {
-                    powerCapInfo.currentPowerLimit = _value;
+                    std::cerr << "Current Chassis Limit value should be between "
+                              << maxValue << "-" << minValue << std::endl;
+                    throw ChassisLimitOutOfRange();
                   }
-                  iface->signal_property(propertyname);
-                  if (static_cast<PowerMode>(powerCapInfo.mode) != OEM) {
-                    powerCapInfo.mode = static_cast<int>(OEM);
+                }
+                else if (propertyname == "PowerCapPercentage")
+                {
+                  /* power cap units are (%), boundaries validation unnecessary. */
+                  if (newPropertyValue <= 100 && newPropertyValue >= 0)
+                  {
+                    _value = newPropertyValue;
+                    powerCapInfo.modulePowerLimitPercentage[index] = _value;
+                    iface->signal_property(propertyname);
+                    propertyChangeFunc(_value);
                   }
-                  // we can handle the property value here and don't need to
-                  // watch the change signal in the same service.
-                  propertyChangeFunc(_value);
-                } else {
-                  std::cerr << "Current Chassis Limit value should be between "
-                            << maxValue << "-" << minValue << std::endl;
-                  throw ChassisLimitOutOfRange();
+                  else
+                  {
+                    std::cerr << "Current Chassis Limit value should be between 100-0"
+                              << std::endl;
+                    throw sdbusplus::xyz::openbmc_project::Common::Error::NotAllowed();
+                  }
+                }
+                else if (propertyname == "MaxPowerCapValue")
+                {
+                  if (index >= 0) {
+                    _value = newPropertyValue;
+                    powerCapInfo.modulePowerLimit_Max[index] = _value;
+                    iface->signal_property(propertyname);
+                    propertyChangeFunc(_value);
+                  }
+                }
+                else if (propertyname == "MinPowerCapValue")
+                {
+                  if (index >= 0) {
+                    _value = newPropertyValue;
+                    powerCapInfo.modulePowerLimit_Min[index] = _value;
+                    iface->signal_property(propertyname);
+                    propertyChangeFunc(_value);
+                  }
+                }
+                else{
+                    std::cerr << "Unexpected property "
+                              << propertyname << std::endl;
+                    throw sdbusplus::xyz::openbmc_project::Common::Error::ResourceNotFound();
                 }
               }
               return 0;

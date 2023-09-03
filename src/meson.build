@@ -6,6 +6,7 @@ cdata.set_quoted(
     'POWERMANAGER_JSON_PATH', '/usr/share/nvidia-power-manager/powermanager.json')
 
 cdata.set('MODULE_NUM', get_option('module_num'))
+cdata.set_quoted('MODULE_OBJ_PATH_PREFIX', get_option('module_obj_path_prefix'))
 
 configure_file(output: 'config.h',
               configuration : cdata,

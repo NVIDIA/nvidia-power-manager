@@ -101,6 +101,28 @@ json util::loadJSONFromFile(const char *path) {
   return data;
 }
 
+size_t util::getPowerCapFileLength(const char *path) {
+  try
+  {
+    std::ifstream ifs(path, std::ios_base::binary);
+    if (!ifs.good()) {
+      log<level::ERR>(std::string("Unable to open file "
+                                  "PATH=" +
+                                  std::string(path))
+                          .c_str());
+      throw std::invalid_argument("file not found");
+    }
+    ifs.seekg(0, std::ios_base::end);
+    size_t fileLength = ifs.tellg();
+    ifs.close();
+    return fileLength;
+  }
+  catch (const std::exception &e) {
+    std::cerr << __func__ << e.what() << std::endl;
+    throw;
+  }
+}
+
 uint8_t *util::loadPowerCapInfoFromFile(const char *path) {
   std::ifstream ifs(path, std::ios_base::binary);
   if (!ifs.good()) {
@@ -151,16 +173,17 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
     std::string powerCapBinPath = JsonConfigData["powerCappingSavePath"];
     uint8_t *dataInt = loadPowerCapInfoFromFile(powerCapBinPath.c_str());
     if (dataInt) {
-      if (checkChecksum(dataInt, sizeof(struct PowerCappingInfo))) {
+      size_t size = getPowerCapFileLength(powerCapBinPath.c_str());
+      if (checkChecksum(dataInt, size)) {
         memcpy(&powerCappingInfo, dataInt, sizeof(struct PowerCappingInfo));
       } else {
         std::cerr
             << "Checksum failed so loading default Power capping Configuration"
             << std::endl;
-        updatePowerCappingStructure();
+        updatePowerCappingStructure(true);
       }
     } else {
-      updatePowerCappingStructure();
+      updatePowerCappingStructure(false);
     }
     int totalPowerConsumptionPercentage = 0;
     for (const auto &jsonData0 : JsonConfigData["powerCappingAlgorithm"]) {
@@ -375,9 +398,7 @@ bool PowerManager::checkChecksum(uint8_t *data, size_t length) {
   }
 }
 
-void PowerManager::updatePowerCappingStructure() {
-  std::cout << "updatePowerCappingStructure" << std::endl;
-
+void PowerManager::updatePowerCappingStructure(bool fileExist) {
   try {
     for (const auto &jsonData0 : JsonConfigData["powerCappingConfigs"]) {
       for (const auto &jsonData1 : jsonData0["property"]) {
@@ -404,6 +425,8 @@ void PowerManager::updatePowerCappingStructure() {
           powerCappingInfo.modulePowerLimit[index] = jsonData1["value"];
         } else if (propertyname == "PowerCap") {
           powerCappingInfo.currentPowerLimit = jsonData1["value"];
+        } else if (propertyname == "PowerCapPercentage" && index >= 0) {
+          powerCappingInfo.modulePowerLimitPercentage[index] = jsonData1["value"];
         } else if (propertyname == "MinPowerCapValue" && index >= 0) {
           powerCappingInfo.modulePowerLimit_Min[index] = jsonData1["value"];
         } else if (propertyname == "MinPowerCapValue") {
@@ -428,14 +451,16 @@ void PowerManager::updatePowerCappingStructure() {
       }
     }
     std::string powerCapBinPath = JsonConfigData["powerCappingSavePath"];
+    size_t size = fileExist ?
+                  getPowerCapFileLength(powerCapBinPath.c_str()) :
+                  sizeof(struct PowerCappingInfo);
     powerCappingInfo.checksum = 0;
     powerCappingInfo.checksum =
-        caluclateChecksum(reinterpret_cast<uint8_t *>(&powerCappingInfo),
-                          sizeof(struct PowerCappingInfo));
+        caluclateChecksum(reinterpret_cast<uint8_t *>(&powerCappingInfo), size);
 
     util::dumpPowerCapIntoFile(powerCapBinPath.c_str(),
                                reinterpret_cast<uint8_t *>(&powerCappingInfo),
-                               sizeof(struct PowerCappingInfo));
+                               size);
   } catch (const std::exception &e) {
     std::cerr << __func__ << e.what() << std::endl;
   }
@@ -904,13 +929,14 @@ void PowerManager::PropertyTriggered(
       }
     }
     std::string powerCapBinPath = JsonConfigData["powerCappingSavePath"];
+    size_t fileLen = getPowerCapFileLength(powerCapBinPath.c_str());
     powerCappingInfo.checksum = 0;
     powerCappingInfo.checksum =
         caluclateChecksum(reinterpret_cast<uint8_t *>(&powerCappingInfo),
-                          sizeof(struct PowerCappingInfo));
+                          fileLen);
     util::dumpPowerCapIntoFile(powerCapBinPath.c_str(),
                                reinterpret_cast<uint8_t *>(&powerCappingInfo),
-                               sizeof(struct PowerCappingInfo));
+                               fileLen);
   } catch (const std::exception &e) {
     std::cerr << __func__ << e.what() << std::endl;
   }

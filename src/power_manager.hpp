@@ -101,8 +101,13 @@ private:
   std::string getSystemChassisObjectPath();
 
   /** @brief Used to update Global Power Capping Properties structure from the
-   * power manager configuration*/
-  void updatePowerCappingStructure();
+   * power manager configuration
+   *
+   * @param[in] fileExist - if true, update database from file
+   * otherwise update database with default values
+   *
+   */
+  void updatePowerCappingStructure(bool fileExist);
 
   /** @brief Used to update Global Power Capping Propery of GPU the power
    * manager configuration*/
