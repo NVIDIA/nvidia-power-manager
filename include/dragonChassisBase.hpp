@@ -420,6 +420,28 @@ protected:
     return ret;
   }
 
+  int sendDataWithRetry(int send_fd, int send_addr, uint8_t *data, int length, int error, int retry) {
+    int ret = 0;
+    for (int i = 0; i < retry; i++)
+    {
+      ret = sendData(send_fd, send_addr, data, length, error);
+      if (!ret)
+        break;
+    }
+    return ret;
+  }
+
+  int transferWithRetry(int bus_fd, int is_read, uint32_t slave, uint8_t *write_data, uint8_t *read_data, int write_count, int read_count, int retry) {
+    int ret = 0;
+    for (int i = 0; i < retry; i++)
+    {
+      ret = transfer(bus_fd, is_read, slave, write_data, read_data, write_count, read_count);
+      if (!ret)
+        break;
+    }
+    return ret;
+  }
+
   /*
   * sendImage - virtual mehtod that will send the data to the target
   */

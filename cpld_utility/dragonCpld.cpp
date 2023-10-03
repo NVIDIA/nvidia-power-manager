@@ -24,6 +24,7 @@
 #define CONF_BITS ((1 << 23) | (1 << 24) | (1 << 25))
 #define PAGE_SIZE 16
 #define REFRESH_GPIO_NAME "CPLD_REFRESH_IN_PRGRS_L-I"
+#define I2C_RETRY_ATTEMPTS 5
 
 DragonCpld::DragonCpld(int updateBus, char *imageName,
                        const char *config)
@@ -42,7 +43,6 @@ int DragonCpld::fwUpdate() {
   ret = loadConfig();
   if (ret)
     goto end;
-
   ret = loadImage();
   if (ret)
     goto end;
@@ -73,15 +73,9 @@ int DragonCpld::fwUpdate() {
   if (ret)
     goto close_cpld_fd;
 
-  ret = erase(true);
-  if (ret)
-    goto close_cpld_fd;
-
-  ret = sendImage();
-  if (ret) {
-    goto close_cpld_fd;
-  }
-
+    ret = sendImage();
+    if (ret)
+      goto close_cpld_fd;
   ret = activate();
   if (ret)
     goto close_cpld_fd;
@@ -102,34 +96,42 @@ end:
 int DragonCpld::readStatusRegister(uint32_t *value) {
   const char write[] = "\x3c\x00\x00\x00"; //read status register command from Lattice specification
 
-  return transfer(fd, 1, address, (uint8_t *)write, (uint8_t *)value, 4, 4);
+  return transferWithRetry(fd, 1, address, (uint8_t *)write, (uint8_t *)value, 4, 4, I2C_RETRY_ATTEMPTS);
 }
 
 int DragonCpld::waitBusy(int wait, int errorCode) {
   int cnt = 0;
   char cmd[] = "\xf0\x00\x00\x00"; //read busy register command from Lattice specification
   char v;
+  int ret = 0;
 
   while (cnt < wait) {
-    transfer(fd, 1, address, (uint8_t *)cmd, (uint8_t *)&v, 4, 1);
+      ret = transferWithRetry(fd, 1, address, (uint8_t *)cmd, (uint8_t *)&v, 4, 1, I2C_RETRY_ATTEMPTS);
+      if (ret)
+        break;
     if (!(v & 0x80))
       break;
     sleep(1);
   }
   if (cnt >= wait) {
-    return errorCode;
+    ret = errorCode;
   }
-  return 0;
+  return ret;
 }
 
 int DragonCpld::readDeviceId() {
   uint8_t cmd[] = {0xe0, 0x00, 0x00, 0x00}; //read device id command from Lattice specification
   uint8_t dev_id[5];
+  int ret = 0;
 
-  transfer(fd, 1, address, (uint8_t *)cmd, dev_id, 4, 4);
+  ret = transferWithRetry(fd, 1, address, (uint8_t *)cmd, dev_id, 4, 4, I2C_RETRY_ATTEMPTS);
+  if (ret)
+    goto end;
+
   for (int i = 0; i < 4;i++)
     if (deviceIdArray[i] != dev_id[i])
       return static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID);
+end:
   return 0;
 }
 
@@ -140,8 +142,8 @@ int DragonCpld::enableConfigurationInterface() {
   const int timeout = 5;
   int ret = 0;
 
-  ret = sendData(fd, address, cmd, 4,
-                 static_cast<int>(UpdateError::ERROR_ENABLE_CFG_INTER_WRITE));
+  ret = sendDataWithRetry(fd, address, cmd, 4,
+                 static_cast<int>(UpdateError::ERROR_ENABLE_CFG_INTER_WRITE), I2C_RETRY_ATTEMPTS);
   if (ret) {
     return ret;
   }
@@ -165,7 +167,7 @@ int DragonCpld::erase(bool reset) {
   int ret;
 
   ret =
-      sendData(fd, address, cmd, 4, static_cast<int>(UpdateError::ERROR_ERASE));
+      sendDataWithRetry(fd, address, cmd, 4, static_cast<int>(UpdateError::ERROR_ERASE), I2C_RETRY_ATTEMPTS);
   if (ret)
     return ret;
 
@@ -180,8 +182,8 @@ int DragonCpld::erase(bool reset) {
   if (reg & FAIL_BIT)
     return static_cast<int>(UpdateError::ERROR_ERASE);
   if (reset) {
-    ret = sendData(fd, address, cmd_reset, 4,
-                   static_cast<int>(UpdateError::ERROR_RESET));
+    ret = sendDataWithRetry(fd, address, cmd_reset, 4,
+                   static_cast<int>(UpdateError::ERROR_RESET), I2C_RETRY_ATTEMPTS);
     if (ret)
       return ret;
   }
@@ -189,6 +191,11 @@ int DragonCpld::erase(bool reset) {
   return 0;
 }
 
+//Lattice CPLD is highly unstable chip when it comes to fw update
+//the chip does not really have "cancel" capability. If verification
+//of the image fails, the cleanup flow does not restore the old firmware
+//try to do update one more time in hopes that it will work
+#define VALIDATE_RETRY 2
 int DragonCpld::sendImage() {
   //send image command from Lattice specification
   //send command is 4 bytes, so it is sending 4 bytes
@@ -196,32 +203,78 @@ int DragonCpld::sendImage() {
   uint8_t cmd[(PAGE_SIZE+5)] = {0x70, 0x00, 0x00, 0x01};
   //done sending image command from Lattice specification
   uint8_t cmdDone[] = {0x5E, 0x00, 0x00, 0x00};
+  uint8_t cmdSetPage[] = {0xB4, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00};
+  uint8_t readPage[] = {0x73, 0x00, 0x00, 0x01};
+  char readBuffer[PAGE_SIZE];
+  int pageNum = 0;
   int remaining = imageSize;
   const int timeout = 5;
   int imageOffset = 0;
   uint32_t reg;
   int ret = 0;
+  int toSend = PAGE_SIZE;
+  bool repeat = false;
 
-  while (remaining > 0) {
-	  int toSend = std::min(remaining, PAGE_SIZE);
-	  memset(&cmd[4], 0, PAGE_SIZE);
-    memcpy(&cmd[4], image + imageOffset , toSend);
-    ret = sendData(fd, address, cmd, PAGE_SIZE + 4,
-                   static_cast<int>(UpdateError::ERROR_SEND_IMAGE));
+  numOfPagesWritten = 0;
+  for (int k = 0; k < VALIDATE_RETRY; k++)
+  {
+    pageNum = 0;
+    cmdSetPage[6] = 0;
+    cmdSetPage[7] = 0;
+    remaining = imageSize;
+    imageOffset = 0;
+    numOfPagesWritten = 0;
+
+    ret = erase(true);
     if (ret)
-      goto end;
-    ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_BUSY));
-    if (ret) {
-      return ret;
+      goto cleanup;
+
+    while (remaining > 0) {
+      repeat = false;
+      toSend = std::min(remaining, PAGE_SIZE);
+      memset(&cmd[4], 0, PAGE_SIZE);
+      memcpy(&cmd[4], image + imageOffset , toSend);
+      //we cannot use here sendDataWithRetry since the chip
+      //will automatically increase the page number that is
+      //being writen
+      ret = sendData(fd, address, cmd, PAGE_SIZE + 4,
+                   static_cast<int>(UpdateError::ERROR_SEND_IMAGE));
+      //if i2c transaction has failed. we need to resend this page
+      if (ret)
+        repeat = true;
+
+      ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_BUSY));
+      if (ret)
+		goto cleanup;
+
+      if (repeat)
+      {
+        //reset the page to the previous number
+        ret = transferWithRetry(fd, 0, address, cmdSetPage, nullptr, 8, 0, I2C_RETRY_ATTEMPTS);
+        if (ret)
+          goto cleanup;
+        continue;
+      }
+      pageNum++;
+      pageNum &= 0xffff;
+      cmdSetPage[6] = (pageNum >> 8) & 0xff;
+      cmdSetPage[7] = pageNum & 0xff;
+      remaining -= toSend;
+      imageOffset += toSend;
+      numOfPagesWritten++;
     }
-	  remaining -= toSend;
-  	imageOffset += toSend;
+    ret = validate();
+    if (!ret)
+      break;
   }
 
-  ret = sendData(fd, address, cmdDone, 4,
-                 static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE));
   if (ret)
-    goto end;
+    goto cleanup;
+
+  ret = sendDataWithRetry(fd, address, cmdDone, 4,
+                 static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE), I2C_RETRY_ATTEMPTS);
+  if (ret)
+    goto cleanup;
   ret = waitBusy(timeout, static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_BUSY));
   if (ret) {
     return ret;
@@ -234,7 +287,11 @@ int DragonCpld::sendImage() {
     cleanUp();
     return static_cast<int>(UpdateError::ERROR_SEND_IMAGE_DONE_CHECK);
   }
-end:
+
+  return ret;
+
+cleanup:
+  cleanUp();
   return ret;
 }
 
@@ -267,6 +324,65 @@ read_refresh:
     else
       ret = static_cast<int>(UpdateError::ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO);
     goto end;
+  }
+end:
+  return ret;
+}
+
+
+int DragonCpld::validate() {
+  uint8_t cmdSetPage[] = {0xB4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  uint8_t readPages[] = {0x73, 0x00, 0x00, 0x01};
+  uint8_t failDataChip[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+  uint8_t failDataI2c[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+  char readBuffer[PAGE_SIZE];
+  char *returnData;
+  int ret = 0;
+  int imageOffset = 0;
+  bool compareFailed = false;
+
+  ret = transferWithRetry(fd, 0, address, cmdSetPage, nullptr, 8, 0, I2C_RETRY_ATTEMPTS);
+    if (ret)
+    {
+      return -1; // you need to add here an error for the case where we could not set the page
+    }
+
+  for (int i = 0; i < numOfPagesWritten; i++)
+  {
+    cmdSetPage[6] = (i >> 8) & 0xff;
+    cmdSetPage[7] = i & 0xff;
+    ret = transferWithRetry(fd, 1, address, readPages, (uint8_t *)readBuffer, 4, PAGE_SIZE, I2C_RETRY_ATTEMPTS);
+    if (ret)
+    {
+      return -1; //add the case where we could not read the data back
+    }
+
+    if (memcmp(image + imageOffset, readBuffer, PAGE_SIZE))
+    {
+      //if there is additional traffic generated on the bus the cpld will start returning fake data
+      //on the pages that are all 0's (usually at the end of the cpld image)
+      if (!memcmp(image + imageOffset, failDataChip, PAGE_SIZE) &&  !memcmp(readBuffer, failDataI2c, PAGE_SIZE))
+      {
+        continue;
+      }
+
+      if (compareFailed)
+      {
+        ret = -1;
+        goto end;
+      }
+      compareFailed = true;
+      //reset i back to previous page
+      i--;
+      ret = transferWithRetry(fd, 0, address, cmdSetPage, nullptr, 8, 0, I2C_RETRY_ATTEMPTS);
+      if (ret)
+      {
+        return -1; // you need to add here an error for the case where we could not set the page
+      }
+      continue;
+    }
+    compareFailed = false;
+    imageOffset += PAGE_SIZE;
   }
 end:
   return ret;
@@ -305,7 +421,7 @@ int DragonCpld::activate() {
     goto end;
   }
 
-  ret = transfer(rawBusFd, 0, address, cmd_refresh, nullptr, 3, 0);
+  ret = transferWithRetry(rawBusFd, 0, address, cmd_refresh, nullptr, 3, 0, I2C_RETRY_ATTEMPTS);
   if (ret) {
     ret = static_cast<int>(UpdateError::ERROR_SEND_INTERNAL_CPLD_REFRESH_FAILED);
     goto closeBus;
@@ -330,6 +446,7 @@ end:
 
 int DragonCpld::cleanUp() {
   int ret = 0;
+
   ret = erase(false);
   if (ret)
     return static_cast<int>(UpdateError::ERROR_CLEANUP_ERASE);

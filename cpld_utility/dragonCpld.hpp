@@ -56,6 +56,8 @@ protected:
   int cpldRegAddress; //i2c address for the cpld register access
   int cpldRegFd; //file descriptor for the cpld register access
   int cpldRawBus; //non-arbitrated version of arbitrated bus
+  int numOfPagesWritten;
+
   const char *config; //path to config file
   //this code is used on another program that does not use arbitration
   //in this case the refresh gpio must be handled in this code instead
@@ -79,6 +81,7 @@ protected:
   * in activate stage
   */
   int activate();
+  int validate();
 
   /*
   * readDeviceId - reads ID of the underlying CPLD to make sure we are updating correct device
