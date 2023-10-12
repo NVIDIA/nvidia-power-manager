@@ -89,6 +89,7 @@ private:
    * Properties */
   std::vector<std::unique_ptr<property::Property>> propertyObjs;
 
+  std::vector<std::unique_ptr<property::areaObject>> areaObjs;
 
   /** @brief Used to subscribe to D-Bus power state changes */
   std::unique_ptr<sdbusplus::bus::match_t> currentPowerState;

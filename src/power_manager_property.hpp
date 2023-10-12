@@ -5,6 +5,7 @@
 #include <tuple>
 
 #include "power_util.hpp"
+#include <xyz/openbmc_project/Inventory/Decorator/Area/server.hpp>
 using namespace nvidia::power::util;
 
 using namespace phosphor::logging;
@@ -73,6 +74,50 @@ namespace property {
  * This class will create an object used to register power capping properties
  * supply devices.
  */
+
+using areaObject = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Area>;
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    areaObject::PhysicalContextType,
+    {
+        {areaObject::PhysicalContextType::Back,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "Back"},
+        {areaObject::PhysicalContextType::Backplane,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "Backplane"},
+        {areaObject::PhysicalContextType::CPU,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "CPU"},
+        {areaObject::PhysicalContextType::Fan,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "Fan"},
+        {areaObject::PhysicalContextType::GPU,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "GPU"},
+        {areaObject::PhysicalContextType::GPUSubsystem,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "GPUSubsystem"},
+        {areaObject::PhysicalContextType::Memory,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "Memory"},
+        {areaObject::PhysicalContextType::NetworkingDevice,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "NetworkingDevice"},
+        {areaObject::PhysicalContextType::PowerSupply,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "PowerSupply"},
+        {areaObject::PhysicalContextType::StorageDevice,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "StorageDevice"},
+        {areaObject::PhysicalContextType::SystemBoard,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "SystemBoard"},
+        {areaObject::PhysicalContextType::VoltageRegulator,
+         "xyz.openbmc_project.Inventory.Decorator.Area.PhysicalContextType."
+         "VoltageRegulator"},
+    });
 
 enum PowerMode {
   Static,

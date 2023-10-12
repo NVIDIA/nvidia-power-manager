@@ -211,6 +211,16 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
           interface->register_property(
               "Associations", association,
               sdbusplus::asio::PropertyPermission::readOnly);
+        } else if (jsonData1["propertyName"] == "PhysicalContext") {
+          auto obj =
+              std::make_unique<property::areaObject>(bus, objectPath.c_str(), property::areaObject::action::emit_object_added);
+          std::string val = jsonData1["value"];
+          obj->convertPhysicalContextTypeFromString(val);
+          obj->physicalContext(
+              obj->convertPhysicalContextTypeFromString(val));
+
+          PowerManager::areaObjs.emplace_back(std::move(obj));
+
         } else {
           auto path = jsonData0["objectName"];
           auto iface = jsonData0["interfaceName"];
