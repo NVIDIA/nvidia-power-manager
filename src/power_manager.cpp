@@ -198,11 +198,14 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
           "is greater than 100");
     }
     for (const auto &jsonData0 : JsonConfigData["PowerRedundancyConfigs"]) {
+      std::string objName = jsonData0["objectName"];
+      std::string ifaceName = jsonData0["interfaceName"];
       auto matchEventObj = std::make_unique<sdbusplus::bus::match_t>(
           bus,
           sdbusplus::bus::match::rules::propertiesChanged(
-              jsonData0["objectName"], jsonData0["interfaceName"]),
-          [this](auto &msg) { this->EventTriggered(msg); });
+              objName, ifaceName),
+          [this](auto &msg)
+          { this->EventTriggered(msg); });
       matchEvent.emplace_back(std::move(matchEventObj));
     }
     for (const auto &jsonData0 : JsonConfigData["powerCappingConfigs"]) {
@@ -262,12 +265,15 @@ PowerManager::PowerManager(sdbusplus::bus::bus &bus,
 
       enabledInterface.emplace_back(std::move(interface));
     }
+    std::string objName = JsonConfigData["powerState"]["objectName"];
+    std::string ifaceName = JsonConfigData["powerState"]["interfaceName"];
     auto matchEventObj = std::make_unique<sdbusplus::bus::match_t>(
         bus,
         sdbusplus::bus::match::rules::propertiesChanged(
-            JsonConfigData["powerState"]["objectName"],
-            JsonConfigData["powerState"]["interfaceName"]),
-        [this](auto &msg) { this->powerStateTriggered(msg); });
+            objName,
+            ifaceName),
+        [this](auto &msg)
+        { this->powerStateTriggered(msg); });
     matchEvent.emplace_back(std::move(matchEventObj));
     // get the initial power status on boot up
     std::string value;
@@ -687,7 +693,8 @@ bool PowerManager::executeConditionBlock(nlohmann::json jsonData) {
         if (propObj->getInterfaceName()->get_object_path() == Path &&
             propObj->getPropertyName() == propertyName) {
           if (propertyName == "PowerMode") {
-            if (propObj->getPowerMode() == jsonData1["propertyValue"]) {
+            std::string mode = jsonData1["propertyValue"];
+            if (propObj->getPowerMode() == mode) {
               conditionSuccess = true;
             } else {
               conditionSuccess = false;
@@ -695,7 +702,8 @@ bool PowerManager::executeConditionBlock(nlohmann::json jsonData) {
             }
 
           } else {
-            if (propObj->getValue() == jsonData1["propertyValue"]) {
+            uint32_t value = jsonData1["propertyValue"];
+            if (propObj->getValue() == value) {
               conditionSuccess = true;
             } else {
               conditionSuccess = false;
@@ -709,17 +717,19 @@ bool PowerManager::executeConditionBlock(nlohmann::json jsonData) {
     auto bus = sdbusplus::bus::new_default();
     if (jsonData1["propertyValue"].type() == json::value_t::string) {
       std::string value;
+      std::string jsonVal = jsonData1["propertyValue"];
       util::getProperty<std::string>(AddInterface, propertyName, Path, Obj, bus,
                                      value);
-      if (value != jsonData1["propertyValue"]) {
+      if (value != jsonVal) {
         conditionSuccess = false;
         break;
       }
     } else if (jsonData1["propertyValue"].type() == json::value_t::boolean) {
       bool value;
+      bool jsonVal = jsonData1["propertyValue"];
       util::getProperty<bool>(AddInterface, propertyName, Path, Obj, bus,
                               value);
-      if (value != jsonData1["propertyValue"]) {
+      if (value != jsonVal) {
         conditionSuccess = false;
         break;
       }
