@@ -14,6 +14,7 @@ cdata.set_quoted(
     'SW_INV_PATH', '/xyz/openbmc_project/software')
 cdata.set_quoted(
     'SOFTWARE_INTERFACE', 'xyz.openbmc_project.Software.Version')
+cdata.set_quoted('PLATFORM_PREFIX', get_option('platform_prefix'))
 
 sdbusplus = dependency('sdbusplus')
 sdeventplus = dependency('sdeventplus')
