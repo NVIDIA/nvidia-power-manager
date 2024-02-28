@@ -136,7 +136,9 @@ class Cpld : public CpldInherit, public Util
     {
         AssociationList fwAssociation;
         std::string swpath = SW_INV_PATH;
-        swpath += "/" + std::filesystem::path(ifPath).filename().string();
+        std::string fName = std::filesystem::path(ifPath).filename().string();
+        fName.insert(strlen(PLATFORM_PREFIX), PLATFORM_FW_PREFIX);
+        swpath+= "/" + fName;
         fwAssociation.emplace_back(
             std::make_tuple("inventory", "activation", swpath));
         fwAssociation.emplace_back(std::make_tuple(
@@ -149,7 +151,9 @@ class Cpld : public CpldInherit, public Util
                                  const std::string& ifPath)
     {
         std::string swpath = SW_INV_PATH;
-        swpath += "/" + std::filesystem::path(ifPath).filename().string();
+        std::string fName = std::filesystem::path(ifPath).filename().string();
+        fName.insert(strlen(PLATFORM_PREFIX), PLATFORM_FW_PREFIX);
+        swpath+= "/" + fName;
         std::string psuVersion = getVersion();
         VersionObj =
             std::make_unique<VersionInterface>(bus, swpath, psuVersion);
