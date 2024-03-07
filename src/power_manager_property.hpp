@@ -242,7 +242,7 @@ public:
                 }
               }
 
-              return 0;
+              return 1;
             },
             [this](const auto &) { return convertPowerModeToString(_mode); });
       } else {
@@ -328,7 +328,7 @@ public:
                     throw sdbusplus::xyz::openbmc_project::Common::Error::ResourceNotFound();
                 }
               }
-              return 0;
+              return 1;
             },
             [this](const auto &) { return _value; });
       } else {
