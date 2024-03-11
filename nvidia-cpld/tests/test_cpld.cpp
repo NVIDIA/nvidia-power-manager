@@ -98,7 +98,7 @@ TEST(CpldTest, JsonFiles)
     EXPECT_EQ(r, nullptr);
 
     std::string tempFileCmd = "touch " + tempname_str;
-    system(tempFileCmd.c_str());
+    auto ec = system(tempFileCmd.c_str());
 
     r = nvidia::cpld::common::loadJSONFile(tempname_str.c_str());
     EXPECT_EQ(r, nullptr);
@@ -111,5 +111,6 @@ TEST(CpldTest, JsonFiles)
     EXPECT_NE(r, nullptr);
 
     tempFileCmd = "rm " + tempname_str;
-    system(tempFileCmd.c_str());
+    ec = system(tempFileCmd.c_str());
+    EXPECT_EQ(ec, 0);
 }
