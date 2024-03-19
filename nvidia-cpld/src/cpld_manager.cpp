@@ -30,7 +30,7 @@ CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
         try
         {
             const auto baseinvInvPath =
-                basePath + "/" + PLATFORM_PREFIX + "Cpld";
+                basePath + "/" + PLATFORM_PREFIX + "CPLD_";
 
             std::string id = fru.at("Index");
             std::string busN = fru.at("Bus");
