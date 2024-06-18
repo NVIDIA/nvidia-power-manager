@@ -118,7 +118,7 @@ class Cpld : public CpldInherit, public Util
 
     Cpld(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
          uint8_t address, const std::string& name, const std::string& modelN,
-         const std::string& manufacturerN) :
+         const std::string& manufacturerN, const std::string& assoc) :
         CpldInherit(bus, (objPath).c_str()),
         bus(bus)
     {
@@ -150,6 +150,10 @@ class Cpld : public CpldInherit, public Util
             chassisType);
         registerAssociationInterface(bus, objPath);
         registerSoftwareVersion(bus, objPath);
+        if (!assoc.empty())
+        {
+            createAssociation(assoc);
+        }
     }
 
     void registerAssociationInterface(sdbusplus::bus::bus& bus,
@@ -183,6 +187,18 @@ class Cpld : public CpldInherit, public Util
     const std::string& getInventoryPath() const
     {
         return inventoryPath;
+    }
+
+    /**
+     * @brief Create a Association object
+     *
+     * @param reversePath
+     */
+    void createAssociation(const std::string& reversePath)
+    {
+        AssociationList assocs = {};;
+        assocs.emplace_back(std::make_tuple("parent_chassis", "inventory", reversePath));
+        associations(assocs);
     }
 
   private:

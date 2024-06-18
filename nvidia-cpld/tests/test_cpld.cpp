@@ -69,8 +69,8 @@ static void sdbusMockExpectPropertyChangeMultiple(sdbusplus::SdBusMock & sdbus_m
 /* ensure that the dbus entries we expect get filled in */
 TEST(CpldTest, CpldTestDbus)
 {
-    std::string path = "/xyz/openbmc_project/inventory/system/chassis/motherboard/CPLD0";
-    std::string swpath = "/xyz/openbmc_project/software/CPLD0";
+    std::string path = "/xyz/openbmc_project/inventory/system/board/HGX_CPLD_0";
+    std::string swpath = "/xyz/openbmc_project/software/HGX_FW_CPLD_0";
     sdbusplus::SdBusMock sdbus_mock;
     auto bus_mock = sdbusplus::get_mocked_new(&sdbus_mock);
     std::vector<std::string> itemNames = {"Present", "PrettyName"};
@@ -92,7 +92,7 @@ TEST(CpldTest, CpldTestDbus)
         sdbus_mock, swpath, "xyz.openbmc_project.Association.Definitions",
         "Associations");
 
-    nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name", "", "");
+    nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name", "", "", "");
 }
 
 /* test JSON load */
