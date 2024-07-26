@@ -60,10 +60,16 @@ CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
             std::string manufacturer = fru.at("Manufacturer");
             std::string invpath = baseinvInvPath + id;
             std::string assoc = "";
+            std::string locType = "";
 
             if (fru.contains("ChassisAssociationEndpoint"))
             {
                 assoc = fru.at("ChassisAssociationEndpoint");
+            }
+
+            if (fru.contains("LocationType"))
+            {
+                locType = fru.at("LocationType");
             }
 
             uint8_t busId = std::stoi(busN);
@@ -78,7 +84,7 @@ CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
                 continue;
             }
             auto inv = std::make_unique<Cpld>(bus, invpath, busId, devAddr, id,
-                                              model, manufacturer, assoc);
+                                              model, manufacturer, assoc, locType);
             cpldInvs.emplace_back(std::move(inv));
         }
         catch (const std::exception& e)

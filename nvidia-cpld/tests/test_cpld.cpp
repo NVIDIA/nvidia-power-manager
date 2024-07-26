@@ -92,7 +92,7 @@ TEST(CpldTest, CpldTestDbus)
         sdbus_mock, swpath, "xyz.openbmc_project.Association.Definitions",
         "Associations");
 
-    nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name", "", "", "");
+    nvidia::cpld::device::Cpld(bus_mock, path, 2, 0x3c, "name", "", "", "", "");
 }
 
 /* test JSON load */

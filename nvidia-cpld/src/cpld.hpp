@@ -29,6 +29,7 @@
 #include <stdexcept>
 #include <xyz/openbmc_project/Association/Definitions/server.hpp>
 #include <xyz/openbmc_project/Inventory/Decorator/Asset/server.hpp>
+#include <xyz/openbmc_project/Inventory/Decorator/Location/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/Chassis/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/server.hpp>
 #include <xyz/openbmc_project/Software/Version/server.hpp>
@@ -45,6 +46,7 @@ using CpldInherit = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::server::Item,
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis,
     sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset,
+    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location,
     sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
 
 using AssociationObject = sdbusplus::server::object::object<
@@ -118,7 +120,7 @@ class Cpld : public CpldInherit, public Util
 
     Cpld(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
          uint8_t address, const std::string& name, const std::string& modelN,
-         const std::string& manufacturerN, const std::string& assoc) :
+         const std::string& manufacturerN, const std::string& assoc, const std::string& locationTypeN) :
         CpldInherit(bus, (objPath).c_str()),
         bus(bus)
     {
@@ -153,6 +155,13 @@ class Cpld : public CpldInherit, public Util
         if (!assoc.empty())
         {
             createAssociation(assoc);
+        }
+        if (!locationTypeN.empty())
+        {
+            auto locType = sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location::
+				convertLocationTypesFromString(locationTypeN);
+            sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location::
+                locationType(locType);
         }
     }
 
