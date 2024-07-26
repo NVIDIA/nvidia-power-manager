@@ -159,7 +159,7 @@ class Cpld : public CpldInherit, public Util
         if (!locationTypeN.empty())
         {
             auto locType = sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location::
-				convertLocationTypesFromString(locationTypeN);
+                               convertLocationTypesFromString(locationTypeN);
             sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location::
                 locationType(locType);
         }
