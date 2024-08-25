@@ -25,7 +25,9 @@ cleanup_file="/usr/bin/cleanup_$2.sh"
 busctl call xyz.openbmc_project.Logging /xyz/openbmc_project/logging xyz.openbmc_project.Logging.Create Create ssa{ss} Update.1.0.TransferringToComponent xyz.openbmc_project.Logging.Entry.Level.Informational 3 'REDFISH_MESSAGE_ARGS' "$2,MTD TARGET" 'REDFISH_MESSAGE_ID' 'Update.1.0.TransferringToComponent' 'namespace' 'FWUpdate'
 
 if [ -f "$setup_file" ] && [ -x "$setup_file" ]; then
-    result=$("$setup_file")
+#use paramter 1 to inform underlying script that it is executing during
+#regular fw update process
+    result=$("$setup_file" 1)
     exit_code=$?
 
     if [ $exit_code -ne 0 ]; then
@@ -39,6 +41,12 @@ if [ -f "$setup_file" ] && [ -x "$setup_file" ]; then
 fi
 
 tail -c +4097 $1 > /run/initramfs/image-$2
+
+#calculate md5sum of the update image to
+#be used by the cleanup script for verification
+#of the update process
+expected_md5sum=$(md5sum "/run/initramfs/image-$2" | awk '{print $1}')
+expected_size=$(stat -c%s "/run/initramfs/image-$2")
 cd /run/initramfs
 result=$(run_command "./update")
 exit_code=$?
@@ -53,7 +61,17 @@ if [ $exit_code -ne 0 ]; then
 fi
 
 if [ -f "$cleanup_file" ] && [ -x "$cleanup_file" ]; then
-    "$cleanup_file"
+#provide 1 as a parameter that the underlying script is running
+#under the regular fw update process and copy of the binary
+#installed for the fw update verification if needed
+    result=$("$cleanup_file" 1 "$expected_md5sum" "$expected_size")
+    exit_code=$?
+    if [ $exit_code -ne 0 ]; then
+        #send fw update task a message that update has failed
+        busctl call xyz.openbmc_project.Logging /xyz/openbmc_project/logging xyz.openbmc_project.Logging.Create Create ssa{ss} org.open_power.Logging.Error.TestError1 xyz.openbmc_project.Logging.Entry.Level.Warning 3 'REDFISH_MESSAGE_ARGS' "${result}" 'REDFISH_MESSAGE_ID' 'ResourceEvent.1.0.ResourceErrorsDetected' 'namespace' 'FWUpdate'
+        exit $exit_code
+    fi
+
 fi
 
 #send fw update task a message that update was success
