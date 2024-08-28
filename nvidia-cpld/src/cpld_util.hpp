@@ -83,7 +83,7 @@ inline std::vector<std::string> executeCmd(T&& path, Types... args)
 
     std::string cmd = path + getCommand(args...);
 
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"),
+    std::unique_ptr<FILE, int(*)(FILE*)> pipe(popen(cmd.c_str(), "r"),
                                                   pclose);
     if (!pipe)
     {
