@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #pragma once
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -83,8 +79,7 @@ inline std::vector<std::string> executeCmd(T&& path, Types... args)
 
     std::string cmd = path + getCommand(args...);
 
-    std::unique_ptr<FILE, int(*)(FILE*)> pipe(popen(cmd.c_str(), "r"),
-                                                  pclose);
+    std::unique_ptr<FILE, int (*)(FILE*)> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe)
     {
         throw std::runtime_error("popen() failed!");
@@ -103,9 +98,7 @@ inline bool invalidChar(char c)
 }
 inline void stripUnicode(std::string& str)
 {
-    str.erase(std::remove_if(str.begin(), str.end(),
-                             invalidChar),
-              str.end());
+    str.erase(std::remove_if(str.begin(), str.end(), invalidChar), str.end());
 }
 class Util
 {

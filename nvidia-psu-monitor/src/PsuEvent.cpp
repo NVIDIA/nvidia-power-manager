@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,36 +15,39 @@
  * limitations under the License.
  */
 
-
-
-
-
 #include "PsuEvent.hpp"
+
+#include <unistd.h>
 
 #include <iostream>
 #include <string>
-#include <unistd.h>
 
-namespace nvidia::psumonitor::event {
+namespace nvidia::psumonitor::event
+{
 /**
  * @class PsuEvent
  */
-PsuEvent::PsuEvent(const std::string &name,
-                   sdbusplus::asio::object_server &objectServer)
-    : objServer(objectServer), name(std::move(name)) {
+PsuEvent::PsuEvent(const std::string& name,
+                   sdbusplus::asio::object_server& objectServer) :
+    objServer(objectServer),
+    name(std::move(name))
+{
+    enabledInterface =
+        objServer.add_interface("/xyz/openbmc_project/sensors/power/" + name,
+                                "xyz.openbmc_project.Object.Enable");
 
-  enabledInterface =
-      objServer.add_interface("/xyz/openbmc_project/sensors/power/" + name,
-                              "xyz.openbmc_project.Object.Enable");
+    enabledInterface->register_property(
+        "Enabled", true, sdbusplus::asio::PropertyPermission::readWrite);
 
-  enabledInterface->register_property(
-      "Enabled", true, sdbusplus::asio::PropertyPermission::readWrite);
-
-  if (!enabledInterface->initialize()) {
-    std::cerr << "error initializing enabled interface\n";
-  }
+    if (!enabledInterface->initialize())
+    {
+        std::cerr << "error initializing enabled interface\n";
+    }
 }
 
-PsuEvent::~PsuEvent() { objServer.remove_interface(enabledInterface); }
+PsuEvent::~PsuEvent()
+{
+    objServer.remove_interface(enabledInterface);
+}
 
 } // namespace nvidia::psumonitor::event

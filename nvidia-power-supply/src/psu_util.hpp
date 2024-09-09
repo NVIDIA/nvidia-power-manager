@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #pragma once
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -122,8 +118,7 @@ inline std::vector<std::string> executeCmd(T&& path, Types... args)
 
     std::string cmd = path + getCommand(args...);
 
-    std::unique_ptr<FILE, int(*)(FILE*)> pipe(popen(cmd.c_str(), "r"),
-                                                  pclose);
+    std::unique_ptr<FILE, int (*)(FILE*)> pipe(popen(cmd.c_str(), "r"), pclose);
     if (!pipe)
     {
         throw std::runtime_error("popen() failed!");
@@ -163,10 +158,12 @@ class PSShellIntf
      * @brief Construct a new PSShellIntf object
      *
      */
-    PSShellIntf() : Id(""), commandUtilityName("") {}
+    PSShellIntf() : Id(""), commandUtilityName("")
+    {}
 
-    PSShellIntf(std::string id, std::string cmd) : Id(id),
-        commandUtilityName(cmd) {
+    PSShellIntf(std::string id, std::string cmd) :
+        Id(id), commandUtilityName(cmd)
+    {
         commandList.push_back("serial");       // serial
         commandList.push_back("part");         // part
         commandList.push_back("manufacturer"); // Manufacturer

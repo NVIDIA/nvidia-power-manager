@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-
-
-
-
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -26,12 +22,12 @@
 #include <linux/i2c.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <time.h>
+#include <unistd.h>
 
 #define FPGA_WRITE 0
 #define FPGA_READ 1
@@ -42,7 +38,7 @@
 
 extern int debug_h;
 extern int debug_l;
-extern const char *versionStr;
+extern const char* versionStr;
 
 // MIDPLANE
 #define MID_I2C_ADDR 0xD4 // MID FPGA 8 bit update addr
@@ -68,24 +64,25 @@ extern const char *versionStr;
 #define MB_VER_ADDR 0x00
 #define ENABLE_MBRECONFIG 0
 
-enum {
-  ERROR_UNKNOW = 100,
-  ERROR_INPUT_ARGUMENTS,
-  ERROR_INPUT_I2C_ARGUMENT,
-  ERROR_OPEN_FIRMWARE,
-  ERROR_WRONG_FIRMWARE,
-  ERROR_MALLOC_FAILURE = 105,
-  ERROR_OPEN_I2C_DEVICE,
-  ERROR_IOCTL_I2C_RDWR_FAILURE,
-  ERROR_PROG_BUF_CHECKSUM_ERROR,
-  ERROR_PROG_READ_CHECKSUM_ERROR,
-  ERROR_PROG_OVER_THREE_TIMES = 110,
-  ERROR_CHECKERR_OVER_THREE_TIMES,
-  ERROR_IMAGE_SEL,
-  ERROR_SET_READMODE,
-  ERROR_ERASE,
-  ERROR_WRONG_CPLD_DEVICE_SELECTION = 115,
-  ERROR_FILE_READ = 116,
+enum
+{
+    ERROR_UNKNOW = 100,
+    ERROR_INPUT_ARGUMENTS,
+    ERROR_INPUT_I2C_ARGUMENT,
+    ERROR_OPEN_FIRMWARE,
+    ERROR_WRONG_FIRMWARE,
+    ERROR_MALLOC_FAILURE = 105,
+    ERROR_OPEN_I2C_DEVICE,
+    ERROR_IOCTL_I2C_RDWR_FAILURE,
+    ERROR_PROG_BUF_CHECKSUM_ERROR,
+    ERROR_PROG_READ_CHECKSUM_ERROR,
+    ERROR_PROG_OVER_THREE_TIMES = 110,
+    ERROR_CHECKERR_OVER_THREE_TIMES,
+    ERROR_IMAGE_SEL,
+    ERROR_SET_READMODE,
+    ERROR_ERASE,
+    ERROR_WRONG_CPLD_DEVICE_SELECTION = 115,
+    ERROR_FILE_READ = 116,
 };
 
 /*
@@ -98,7 +95,7 @@ enum {
  *
  * No RETURN.
  */
-void show_usage(char *exec);
+void show_usage(char* exec);
 
 /*
  * wait_until_not_busy()
@@ -126,7 +123,7 @@ int wait_until_not_busy(int fd, unsigned int delay);
  *
  * RETURN: 0 if success
  */
-int checkDigit(char *str);
+int checkDigit(char* str);
 
 /*
  * flash_remote_mid_fpga_image()
@@ -139,8 +136,8 @@ int checkDigit(char *str);
  * flashing_progress : flashing_progress
  *
  */
-int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
-                                int *flashing_progress, char *id);
+int flash_remote_mid_fpga_image(int bus, int image_sel, char* image,
+                                int* flashing_progress, char* id);
 
 /*
  * flash_remote_md_fpga_image()
@@ -153,5 +150,5 @@ int flash_remote_mid_fpga_image(int bus, int image_sel, char *image,
  * flashing_progress : flashing_progress
  *
  */
-int flash_remote_mb_fpga_image(int bus, int image_sel, char *image,
-                               int *flashing_progress, char *id);
+int flash_remote_mb_fpga_image(int bus, int image_sel, char* image,
+                               int* flashing_progress, char* id);

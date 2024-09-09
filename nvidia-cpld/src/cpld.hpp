@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #pragma once
 
@@ -120,7 +116,8 @@ class Cpld : public CpldInherit, public Util
 
     Cpld(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
          uint8_t address, const std::string& name, const std::string& modelN,
-         const std::string& manufacturerN, const std::string& assoc, const std::string& locationTypeN) :
+         const std::string& manufacturerN, const std::string& assoc,
+         const std::string& locationTypeN) :
         CpldInherit(bus, (objPath).c_str()),
         bus(bus)
     {
@@ -142,8 +139,9 @@ class Cpld : public CpldInherit, public Util
         sdbusplus::xyz::openbmc_project::State::Decorator::server::
             OperationalStatus::functional(true);
         sdbusplus::xyz::openbmc_project::State::Decorator::server::
-            OperationalStatus::state(sdbusplus::xyz::openbmc_project::State::Decorator::server::
-            OperationalStatus::StateType::Enabled);
+            OperationalStatus::state(
+                sdbusplus::xyz::openbmc_project::State::Decorator::server::
+                    OperationalStatus::StateType::Enabled);
         auto chassisType =
             sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis::
                 convertChassisTypeFromString("xyz.openbmc_project.Inventory."
@@ -158,10 +156,11 @@ class Cpld : public CpldInherit, public Util
         }
         if (!locationTypeN.empty())
         {
-            auto locType = sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location::
-                               convertLocationTypesFromString(locationTypeN);
-            sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Location::
-                locationType(locType);
+            auto locType =
+                sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::
+                    Location::convertLocationTypesFromString(locationTypeN);
+            sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::
+                Location::locationType(locType);
         }
     }
 
@@ -172,7 +171,7 @@ class Cpld : public CpldInherit, public Util
         std::string swpath = SW_INV_PATH;
         std::string fName = std::filesystem::path(ifPath).filename().string();
         fName.insert(strlen(PLATFORM_PREFIX), PLATFORM_FW_PREFIX);
-        swpath+= "/" + fName;
+        swpath += "/" + fName;
         fwAssociation.emplace_back(
             std::make_tuple("inventory", "activation", swpath));
         fwAssociation.emplace_back(std::make_tuple(
@@ -187,7 +186,7 @@ class Cpld : public CpldInherit, public Util
         std::string swpath = SW_INV_PATH;
         std::string fName = std::filesystem::path(ifPath).filename().string();
         fName.insert(strlen(PLATFORM_PREFIX), PLATFORM_FW_PREFIX);
-        swpath+= "/" + fName;
+        swpath += "/" + fName;
         std::string psuVersion = getVersion();
         VersionObj =
             std::make_unique<VersionInterface>(bus, swpath, psuVersion);
@@ -205,8 +204,10 @@ class Cpld : public CpldInherit, public Util
      */
     void createAssociation(const std::string& reversePath)
     {
-        AssociationList assocs = {};;
-        assocs.emplace_back(std::make_tuple("parent_chassis", "inventory", reversePath));
+        AssociationList assocs = {};
+        ;
+        assocs.emplace_back(
+            std::make_tuple("parent_chassis", "inventory", reversePath));
         associations(assocs);
     }
 

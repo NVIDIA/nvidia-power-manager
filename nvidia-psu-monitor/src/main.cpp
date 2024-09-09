@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #include "PsuEvent.hpp"
 #include "PsuMonitor.hpp"
@@ -33,39 +29,40 @@
 using namespace nvidia::psumonitor;
 using namespace nvidia::psumonitor::event;
 
-int main(void) {
+int main(void)
+{
+    int psuEve[3]{1, 2, 3};
+    std::vector<std::shared_ptr<PsuEvent>> psuEvents;
 
-  int psuEve[3]{1, 2, 3};
-  std::vector<std::shared_ptr<PsuEvent>> psuEvents;
+    std::string eventRegisters[3] = {"psu_drop_to_1_event",
+                                     "psu_drop_to_2_event", "MBON_GBOFF_event"};
 
-  std::string eventRegisters[3] = {"psu_drop_to_1_event", "psu_drop_to_2_event",
-                                   "MBON_GBOFF_event"};
+    try
+    {
+        boost::asio::io_service io;
+        auto systemBus = std::make_shared<sdbusplus::asio::connection>(io);
 
-  try {
+        systemBus->request_name("com.Nvidia.PsuEvent");
+        sdbusplus::asio::object_server objectServer(systemBus);
 
-    boost::asio::io_service io;
-    auto systemBus = std::make_shared<sdbusplus::asio::connection>(io);
+        for (const auto& i : psuEve)
+        {
+            auto psuEvent = std::make_unique<PsuEvent>(eventRegisters[i - 1],
+                                                       objectServer);
 
-    systemBus->request_name("com.Nvidia.PsuEvent");
-    sdbusplus::asio::object_server objectServer(systemBus);
+            psuEvents.emplace_back(std::move(psuEvent));
+        }
 
-    for (const auto &i : psuEve) {
-      auto psuEvent =
-          std::make_unique<PsuEvent>(eventRegisters[i - 1], objectServer);
+        PsuMonitor psuMonitor(io, psuEvents);
+        psuMonitor.start();
 
-      psuEvents.emplace_back(std::move(psuEvent));
+        io.run();
     }
 
-    PsuMonitor psuMonitor(io, psuEvents);
-    psuMonitor.start();
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << std::endl;
+    }
 
-    io.run();
-
-  }
-
-  catch (const std::exception &e) {
-    std::cerr << e.what() << std::endl;
-  }
-
-  return 0;
+    return 0;
 }

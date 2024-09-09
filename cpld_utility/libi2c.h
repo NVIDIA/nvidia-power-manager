@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #include "libcpld.h"
 
@@ -36,5 +32,5 @@
  * RETURN: 0 if success
  */
 int std_send_i2c_cmd(int fd, int isRead, unsigned char slave,
-                     unsigned char *write_data, unsigned char *read_data,
+                     unsigned char* write_data, unsigned char* read_data,
                      unsigned int write_count, unsigned int read_count);

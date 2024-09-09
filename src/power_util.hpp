@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,18 @@
  * limitations under the License.
  */
 
-
-
-
-
 #pragma once
 
 #include "config.h"
-#include <boost/asio/io_service.hpp>
-#include <filesystem>
+
 #include <fmt/format.h>
-#include <fstream>
-#include <iostream>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include <boost/asio/io_service.hpp>
 #include <nlohmann/json.hpp>
 #include <phosphor-logging/elog.hpp>
 #include <phosphor-logging/log.hpp>
-#include <regex>
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 #include <sdbusplus/bus.hpp>
@@ -40,13 +36,19 @@
 #include <sdbusplus/vtable.hpp>
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/utility/timer.hpp>
-#include <string>
-#include <sys/types.h>
-#include <unistd.h>
 
-namespace nvidia {
-namespace power {
-namespace util {
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <regex>
+#include <string>
+
+namespace nvidia
+{
+namespace power
+{
+namespace util
+{
 
 using namespace phosphor::logging;
 using json = nlohmann::json;
@@ -63,16 +65,16 @@ constexpr auto PROPERTY_INTF = "org.freedesktop.DBus.Properties";
  *
  * @return The service name
  */
-std::string getService(const std::string &path, const std::string &interface,
-                       sdbusplus::bus::bus &bus, bool logError = true);
+std::string getService(const std::string& path, const std::string& interface,
+                       sdbusplus::bus::bus& bus, bool logError = true);
 
 std::vector<std::string>
-getSubtreePaths(sdbusplus::bus::bus &bus,
-                const std::vector<std::string> &interfaces,
-                const std::string &path);
+    getSubtreePaths(sdbusplus::bus::bus& bus,
+                    const std::vector<std::string>& interfaces,
+                    const std::string& path);
 
 std::map<std::string, std::vector<std::string>>
-getInterfaces(const std::string &path, sdbusplus::bus::bus &bus);
+    getInterfaces(const std::string& path, sdbusplus::bus::bus& bus);
 
 /**
  * @brief Read a D-Bus property
@@ -85,20 +87,21 @@ getInterfaces(const std::string &path, sdbusplus::bus::bus &bus);
  * @param[out] value - filled in with the property value
  */
 template <typename T>
-void getProperty(const std::string &interface, const std::string &propertyName,
-                 const std::string &path, const std::string &service,
-                 sdbusplus::bus::bus &bus, T &value) {
-  std::variant<T> property;
+void getProperty(const std::string& interface, const std::string& propertyName,
+                 const std::string& path, const std::string& service,
+                 sdbusplus::bus::bus& bus, T& value)
+{
+    std::variant<T> property;
 
-  auto method =
-      bus.new_method_call(service.c_str(), path.c_str(), PROPERTY_INTF, "Get");
+    auto method = bus.new_method_call(service.c_str(), path.c_str(),
+                                      PROPERTY_INTF, "Get");
 
-  method.append(interface, propertyName);
+    method.append(interface, propertyName);
 
-  auto reply = bus.call(method);
+    auto reply = bus.call(method);
 
-  reply.read(property);
-  value = std::get<T>(property);
+    reply.read(property);
+    value = std::get<T>(property);
 }
 
 /**
@@ -112,17 +115,18 @@ void getProperty(const std::string &interface, const std::string &propertyName,
  * @param[in] value - the value to set the property to
  */
 template <typename T>
-void setProperty(const std::string &interface, const std::string &propertyName,
-                 const std::string &path, const std::string &service,
-                 sdbusplus::bus::bus &bus, T &value) {
-  std::variant<T> propertyValue(value);
+void setProperty(const std::string& interface, const std::string& propertyName,
+                 const std::string& path, const std::string& service,
+                 sdbusplus::bus::bus& bus, T& value)
+{
+    std::variant<T> propertyValue(value);
 
-  auto method =
-      bus.new_method_call(service.c_str(), path.c_str(), PROPERTY_INTF, "Set");
+    auto method = bus.new_method_call(service.c_str(), path.c_str(),
+                                      PROPERTY_INTF, "Set");
 
-  method.append(interface, propertyName, propertyValue);
+    method.append(interface, propertyName, propertyValue);
 
-  auto reply = bus.call(method);
+    auto reply = bus.call(method);
 }
 
 /**
@@ -131,7 +135,7 @@ void setProperty(const std::string &interface, const std::string &propertyName,
  * @param[in] path - the absolute path for json configuration file
  *
  */
-json loadJSONFromFile(const char *path);
+json loadJSONFromFile(const char* path);
 
 /**
  * @brief load a power cap binary file
@@ -139,7 +143,7 @@ json loadJSONFromFile(const char *path);
  * @param[in] path - the absolute path for power cap binary file
  *
  */
-int dumpPowerCapIntoFile(const char *path, uint8_t *data, int length);
+int dumpPowerCapIntoFile(const char* path, uint8_t* data, int length);
 
 /**
  * @brief return power cap binary file size
@@ -147,7 +151,7 @@ int dumpPowerCapIntoFile(const char *path, uint8_t *data, int length);
  * @param[in] path - the absolute path for power cap binary file
  *
  */
-uint8_t *loadPowerCapInfoFromFile(const char *path);
+uint8_t* loadPowerCapInfoFromFile(const char* path);
 /**
  * @brief dump a power cap structure to file
  *
@@ -156,7 +160,7 @@ uint8_t *loadPowerCapInfoFromFile(const char *path);
  * @param[in] length - length of the data buffer
  *
  */
-size_t getPowerCapFileLength(const char *path);
+size_t getPowerCapFileLength(const char* path);
 } // namespace util
 } // namespace power
 } // namespace nvidia

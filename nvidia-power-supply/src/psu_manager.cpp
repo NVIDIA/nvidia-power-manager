@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #include "psu_manager.hpp"
 
@@ -76,7 +72,8 @@ PSUManager::PSUManager(sdbusplus::bus::bus& bus, std::string baseInvPath) :
                 continue;
             }
 
-            auto psu = std::make_unique<PowerSupply>(bus, invpath, cmdUtilityName, id, assoc);
+            auto psu = std::make_unique<PowerSupply>(bus, invpath,
+                                                     cmdUtilityName, id, assoc);
             psus.emplace_back(std::move(psu));
         }
         catch (const std::exception& e)

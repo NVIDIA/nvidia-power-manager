@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,14 @@
  * limitations under the License.
  */
 
-
-
-
-
 #pragma once
 #include <sdbusplus/server.hpp>
 
 #include <map>
 #include <vector>
 
-namespace nvidia::psumontior::utils {
+namespace nvidia::psumontior::utils
+{
 
 constexpr auto MAPPER_BUSNAME = "xyz.openbmc_project.ObjectMapper";
 constexpr auto MAPPER_OBJ_PATH = "/xyz/openbmc_project/object_mapper";
@@ -51,47 +48,51 @@ using PropertyMap = std::map<DbusProperty, PropertyValue>;
  *
  *  This class contains the APIs to handle the D-Bus calls.
  */
-class DBusHandler {
-public:
-  /** @brief Get the bus connection. */
-  static auto &getBus() {
-    static auto bus = sdbusplus::bus::new_default();
-    return bus;
-  }
+class DBusHandler
+{
+  public:
+    /** @brief Get the bus connection. */
+    static auto& getBus()
+    {
+        static auto bus = sdbusplus::bus::new_default();
+        return bus;
+    }
 
-  /**
-   *  @brief Get service name by the path and interface of the DBus.
-   *
-   *  @param path
-   *  @param interface
-   *
-   *  @return std::string
-   *
-   */
-  const std::string getService(const std::string &path,
-                               const std::string &interface) const;
+    /**
+     *  @brief Get service name by the path and interface of the DBus.
+     *
+     *  @param path
+     *  @param interface
+     *
+     *  @return std::string
+     *
+     */
+    const std::string getService(const std::string& path,
+                                 const std::string& interface) const;
 
-  /** @brief Set D-Bus property
-   *
-   *  @param objectPath
-   *  @param interface
-   *  @param propertyName
-   *  @param value
-   *
-   *  @throw sdbusplus::exception::exception when it fails
-   */
-  void setProperty(const std::string &objectPath, const std::string &interface,
-                   const std::string &propertyName,
-                   const PropertyValue &value) const;
+    /** @brief Set D-Bus property
+     *
+     *  @param objectPath
+     *  @param interface
+     *  @param propertyName
+     *  @param value
+     *
+     *  @throw sdbusplus::exception::exception when it fails
+     */
+    void setProperty(const std::string& objectPath,
+                     const std::string& interface,
+                     const std::string& propertyName,
+                     const PropertyValue& value) const;
 
-  /** @brief Get sub tree paths by the path and interface of the DBus.
-   *
-   *  @param  objectPath
-   *  @param  interface
-   *  @return std::vector<std::string> vector of subtree paths
-   */
-  const std::vector<std::string> getSubTreePaths(const std::string &objectPath,
-                                                 const std::string &interface);
+    /** @brief Get sub tree paths by the path and interface of the DBus.
+     *
+     *  @param  objectPath
+     *  @param  interface
+     *  @return std::vector<std::string> vector of subtree paths
+     */
+    const std::vector<std::string>
+        getSubTreePaths(const std::string& objectPath,
+                        const std::string& interface);
 };
 
 } // namespace nvidia::psumontior::utils

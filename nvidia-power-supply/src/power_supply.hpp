@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #pragma once
 
@@ -172,15 +168,14 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
             partNumber(getPartNumber());
         sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset::
             serialNumber(getSerialNumber());
-        sdbusplus::xyz::openbmc_project::Inventory::server::Item::present(
-            true);
+        sdbusplus::xyz::openbmc_project::Inventory::server::Item::present(true);
         sdbusplus::xyz::openbmc_project::Inventory::server::Item::prettyName(
             "Power Supply " + name);
         sdbusplus::xyz::openbmc_project::State::Decorator::server::
             OperationalStatus::functional(true);
-        sdbusplus::xyz::openbmc_project::State::Decorator::server::PowerState::powerState(
-            sdbusplus::xyz::openbmc_project::State::Decorator::server::PowerState::State::On
-        );
+        sdbusplus::xyz::openbmc_project::State::Decorator::server::PowerState::
+            powerState(sdbusplus::xyz::openbmc_project::State::Decorator::
+                           server::PowerState::State::On);
         registerAssociationInterface(bus, objPath);
         registerSoftwareVersion(bus, objPath);
         registerSensorObject(bus, objPath);
@@ -189,7 +184,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
     }
 
     void registerAssociationInterface(sdbusplus::bus::bus& bus,
-                                                   const std::string& ifPath)
+                                      const std::string& ifPath)
     {
         AssociationList fwAssociation;
         std::string swpath = SW_INV_PATH;
@@ -220,7 +215,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
     }
 
     void registerSoftwareVersion(sdbusplus::bus::bus& bus,
-                                              const std::string& ifPath)
+                                 const std::string& ifPath)
     {
         std::string swpath = SW_INV_PATH;
         swpath += "/" + std::filesystem::path(ifPath).filename().string();
@@ -231,7 +226,8 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
 
     void updatePresence(bool present)
     {
-        sdbusplus::xyz::openbmc_project::Inventory::server::Item::present(present);
+        sdbusplus::xyz::openbmc_project::Inventory::server::Item::present(
+            present);
         PowerSupplySensorObj->present(present);
     }
 

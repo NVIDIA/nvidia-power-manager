@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
 
 #include "cpld_manager.hpp"
 
@@ -83,8 +79,9 @@ CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
             {
                 continue;
             }
-            auto inv = std::make_unique<Cpld>(bus, invpath, busId, devAddr, id,
-                                              model, manufacturer, assoc, locType);
+            auto inv =
+                std::make_unique<Cpld>(bus, invpath, busId, devAddr, id, model,
+                                       manufacturer, assoc, locType);
             cpldInvs.emplace_back(std::move(inv));
         }
         catch (const std::exception& e)

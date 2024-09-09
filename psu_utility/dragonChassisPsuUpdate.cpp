@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
-
-
-
 
 #include "dragonDeltaPsu.hpp"
 
@@ -41,48 +35,56 @@
 #include <thread>
 #include <vector>
 
-void printUsage() {
-  std::cout << "The code must be called as psufwupdate fwupgrade BUS "
-               "ADDRESS(8-bit) "
-               "FILE_TO_FLASH"
-            << std::endl;
+void printUsage()
+{
+    std::cout << "The code must be called as psufwupdate fwupgrade BUS "
+                 "ADDRESS(8-bit) "
+                 "FILE_TO_FLASH"
+              << std::endl;
 }
 
-int main(int argc, char **argv) {
-  int bus = 0;
-  int address = 0;
-  bool arbitrator = true;
-  const char fwIdentifier[] = "\x32\x32\x30\x30\x32\x30\x36\x35\x44\x43\x45";
-  char *imageName = nullptr;
-  int ret = 0;
+int main(int argc, char** argv)
+{
+    int bus = 0;
+    int address = 0;
+    bool arbitrator = true;
+    const char fwIdentifier[] = "\x32\x32\x30\x30\x32\x30\x36\x35\x44\x43\x45";
+    char* imageName = nullptr;
+    int ret = 0;
 
-  if (argc < 4) {
-    printUsage();
-    return -1;
-  }
+    if (argc < 4)
+    {
+        printUsage();
+        return -1;
+    }
 
-  bus = atoi(argv[2]);
-  address = atoi(argv[3]);
-  imageName = argv[4];
+    bus = atoi(argv[2]);
+    address = atoi(argv[3]);
+    imageName = argv[4];
 
-  if (address <= 0 || bus < 0 || imageName == nullptr) {
-    std::cout << "bus, address and image name must be specified" << std::endl;
-    printUsage();
-    return 0;
-  }
+    if (address <= 0 || bus < 0 || imageName == nullptr)
+    {
+        std::cout << "bus, address and image name must be specified"
+                  << std::endl;
+        printUsage();
+        return 0;
+    }
 
-  DragonDeltaPsu dp(bus, address, arbitrator, fwIdentifier, imageName);
-  ret = dp.fwUpdate();
-  if (ret &&
-      ret != static_cast<int>(
-                 DragonChassisBase::UpdateError::ERROR_WRONG_MANUFACTURER)) {
-    dp.printError(ret);
-    goto end;
-  } else if (ret ==
+    DragonDeltaPsu dp(bus, address, arbitrator, fwIdentifier, imageName);
+    ret = dp.fwUpdate();
+    if (ret &&
+        ret != static_cast<int>(
+                   DragonChassisBase::UpdateError::ERROR_WRONG_MANUFACTURER))
+    {
+        dp.printError(ret);
+        goto end;
+    }
+    else if (ret ==
              static_cast<int>(
-                 DragonChassisBase::UpdateError::ERROR_WRONG_MANUFACTURER)) {
-    // handle LiteON PSU
-  }
+                 DragonChassisBase::UpdateError::ERROR_WRONG_MANUFACTURER))
+    {
+        // handle LiteON PSU
+    }
 end:
-  return ret;
+    return ret;
 }

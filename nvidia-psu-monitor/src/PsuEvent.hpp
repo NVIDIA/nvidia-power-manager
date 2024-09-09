@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,46 +15,44 @@
  * limitations under the License.
  */
 
-
-
-
-
 #pragma once
 
 #include <sdbusplus/asio/object_server.hpp>
 
-namespace nvidia::psumonitor::event {
+namespace nvidia::psumonitor::event
+{
 /**
  * @class PsuEvent
  */
-class PsuEvent {
-public:
-  /**
-   * @brief Construct a new PsuEvent object
-   *
-   * @param name
-   * @param objectserver
-   * @param event
-   */
-  PsuEvent(const std::string &name,
-           sdbusplus::asio::object_server &objectServer);
-  ~PsuEvent();
+class PsuEvent
+{
+  public:
+    /**
+     * @brief Construct a new PsuEvent object
+     *
+     * @param name
+     * @param objectserver
+     * @param event
+     */
+    PsuEvent(const std::string& name,
+             sdbusplus::asio::object_server& objectServer);
+    ~PsuEvent();
 
-  /**
-   * @brief dbus oject server
-   *
-   */
-  sdbusplus::asio::object_server &objServer;
-  /**
-   * @brief d-Bus interface
-   *
-   */
-  std::shared_ptr<sdbusplus::asio::dbus_interface> enabledInterface;
-  /**
-   * @brief psu event name
-   *
-   */
-  std::string name;
+    /**
+     * @brief dbus oject server
+     *
+     */
+    sdbusplus::asio::object_server& objServer;
+    /**
+     * @brief d-Bus interface
+     *
+     */
+    std::shared_ptr<sdbusplus::asio::dbus_interface> enabledInterface;
+    /**
+     * @brief psu event name
+     *
+     */
+    std::string name;
 };
 
 } // namespace nvidia::psumonitor::event

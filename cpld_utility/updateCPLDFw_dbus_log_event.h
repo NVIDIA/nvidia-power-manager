@@ -1,6 +1,6 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2021-2024 NVIDIA CORPORATION &
+ * AFFILIATES. All rights reserved. SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-
-
-
-
 #include <systemd/sd-bus.h>
 
 // Message Register Variables
@@ -32,5 +28,5 @@
 #define LOG_CREATE_SIGNATURE "ssa{ss}"
 
 /* no return, we will call and fail silently if busctl isn't present */
-void emitLogMessage(const char *message, const char *arg0, const char *arg1, const char *severity,
-                    const char *resolution);
+void emitLogMessage(const char* message, const char* arg0, const char* arg1,
+                    const char* severity, const char* resolution);
