@@ -153,7 +153,19 @@ class Util
     }
     virtual std::string getVersion() const
     {
-        return runCommand(0x2d, 2);
+        const int maxRetries = 5;
+        std::string result;
+        for (int cnt = 0; cnt < maxRetries; cnt++)
+        {
+            result = runCommand(0x2d, 2);
+
+            if (!result.empty())
+            {
+                return result;
+            }
+        }
+
+        return result;
     }
 };
 } // namespace nvidia::cpld::common
