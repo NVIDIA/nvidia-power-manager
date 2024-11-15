@@ -103,26 +103,24 @@ int main(int argc, char* argv[])
             configFile = argv[6];
         }
     }
-    if (cpldDeviceSelection == 1)
+#ifdef DRAGON_CHASSIS
+    if (argc > 6)
+    {
+        DragonCpld dp(cpldDeviceSelection, image, configFile);
+        ret = dp.fwUpdate();
+        dp.printError(ret);
+    }
+    else
+#endif
+        if (cpldDeviceSelection == 1)
     {
         ret = flash_remote_mb_fpga_image(bus, image_sel, image,
                                          &flashing_progress, cpld0);
     }
     else if (cpldDeviceSelection == 2)
     {
-#ifdef DRAGON_CHASSIS
-        if (argc > 6)
-        {
-            DragonCpld dp(bus, image, configFile);
-            ret = dp.fwUpdate();
-            dp.printError(ret);
-        }
-        else
-#endif
-        {
-            ret = flash_remote_mid_fpga_image(bus, image_sel, image,
-                                              &flashing_progress, cpld1);
-        }
+        ret = flash_remote_mid_fpga_image(bus, image_sel, image,
+                                          &flashing_progress, cpld1);
     }
     else
     {

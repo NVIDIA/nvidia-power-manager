@@ -29,8 +29,8 @@
 #define REFRESH_GPIO_NAME "CPLD_REFRESH_IN_PRGRS_L-I"
 #define I2C_RETRY_ATTEMPTS 5
 
-DragonCpld::DragonCpld(int updateBus, char* imageName, const char* config) :
-    DragonChassisBase(updateBus, 0, true, imageName), config(config)
+DragonCpld::DragonCpld(int devIdx, char* imageName, const char* config) :
+    DragonChassisBase(devIdx, 0, true, imageName), config(config)
 
 {}
 
@@ -65,12 +65,17 @@ int DragonCpld::fwUpdate()
         goto disable_arb;
     }
 
-    cpldRegFd = openBus(cpldRegBus);
-    if (cpldRegFd < 0)
+    if (cpldRegBus != bus)
     {
-        ret = static_cast<int>(UpdateError::ERROR_OPEN_BUS);
-        goto close_fd;
+        cpldRegFd = openBus(cpldRegBus);
+        if (cpldRegFd < 0)
+        {
+            ret = static_cast<int>(UpdateError::ERROR_OPEN_BUS);
+            goto close_fd;
+        }
     }
+    else
+        cpldRegFd = fd;
 
     ret = readDeviceId();
     if (ret)
@@ -223,7 +228,7 @@ int DragonCpld::erase(bool reset)
 // the chip does not really have "cancel" capability. If verification
 // of the image fails, the cleanup flow does not restore the old firmware
 // try to do update one more time in hopes that it will work
-#define VALIDATE_RETRY 2
+#define VALIDATE_RETRY 1
 int DragonCpld::sendImage()
 {
     // send image command from Lattice specification
@@ -535,25 +540,30 @@ int DragonCpld::loadConfig()
             else
                 arb = false;
             rawLattice = cpldInfo.at("RawLattice").get<bool>();
-            std::string busS = cpldInfo.at("Bus");
-            int busN = stoi(busS);
-            if (busN == bus)
+
+            // try find corresponding CPLD device in JSON
+            int cpldDevNo = cpldInfo.at("CPLDDeviceNo");
+            if (cpldDevNo == devIdx)
             {
+                std::string devBus = cpldInfo.at("Bus");
+                bus = stoi(devBus);
                 std::string ad = cpldInfo.at("Address");
-                address = stoi(ad);
+                address = handlHexString(ad);
                 std::string cpldRb = cpldInfo.at("CpldRegBus");
                 cpldRegBus = stoi(cpldRb);
                 std::string cpldRa = cpldInfo.at("CpldRegAddress");
-                cpldRegAddress = stoi(cpldRa);
+                cpldRegAddress = handlHexString(cpldRa);
                 std::string cpldRaB = cpldInfo.at("CpldRawBus");
                 cpldRawBus = stoi(cpldRaB);
+                imageOffset = cpldInfo.at("ImageOffset");
                 found = true;
-            }
-            for (size_t i = 0; i < deviceIdArray.size(); ++i)
-            {
-                std::string hexValue = cpldInfo.at("DeviceId")[i];
-                deviceIdArray[i] =
-                    static_cast<uint8_t>(std::stoi(hexValue, 0, 16));
+                for (size_t i = 0; i < deviceIdArray.size(); ++i)
+                {
+                    std::string hexValue = cpldInfo.at("DeviceId")[i];
+                    deviceIdArray[i] =
+                        static_cast<uint8_t>(std::stoi(hexValue, 0, 16));
+                }
+                break;
             }
         }
         catch (const std::exception& e)

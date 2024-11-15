@@ -31,7 +31,7 @@ class DragonCpld : public DragonChassisBase
     /*
      * Constructor:
      * inputs:
-     * updateBus -bus number provided by the user
+     * cpldDevSel - index of CPLD that will be updated
      * imageName - path to image file
      * config - path to config file
      * config file is necessary due to the complexity of cpld firmware update
@@ -43,7 +43,7 @@ class DragonCpld : public DragonChassisBase
      * i2c bus. to make process easier on upper layers whole config is expected
      * here.
      */
-    DragonCpld(int updateBus, char* imageName, const char* config);
+    DragonCpld(int cpldDevSel, char* imageName, const char* config);
     virtual ~DragonCpld();
 
     /*
@@ -56,12 +56,12 @@ class DragonCpld : public DragonChassisBase
     int fwUpdate();
 
   protected:
+    int bus;            // i2c bus number
     int cpldRegBus;     // i2c bus for the cpld register access
     int cpldRegAddress; // i2c address for the cpld register access
     int cpldRegFd;      // file descriptor for the cpld register access
     int cpldRawBus;     // non-arbitrated version of arbitrated bus
     int numOfPagesWritten;
-
     const char* config; // path to config file
     // this code is used on another program that does not use arbitration
     // in this case the refresh gpio must be handled in this code instead
@@ -130,4 +130,32 @@ class DragonCpld : public DragonChassisBase
      * sendImage - sends update image to the cpld
      */
     int sendImage() override;
+
+    /**
+     * handleHexString - Converts a string to an integer,
+     *                   handling both decimal and hexadecimal formats.
+     *
+     * @param str The input string to be converted.
+     *            If the string starts with "0x", it's treated as hexadecimal.
+     *            Otherwise, it's treated as decimal.
+     *
+     * @return The converted integer value.
+     *         For hexadecimal input, the result is left-shifted by 1 bit.
+     */
+    int handlHexString(std::string str)
+    {
+        int address;
+        // treat it as hex format if it has 0x prefix
+        if (str.substr(0, 2) == "0x")
+        {
+            str = str.substr(2);
+            address = stoi(str, nullptr, 16);
+            address <<= 1;
+        }
+        else
+        {
+            address = stoi(str);
+        }
+        return address;
+    }
 };
