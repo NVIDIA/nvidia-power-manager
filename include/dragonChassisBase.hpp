@@ -38,13 +38,15 @@ class DragonChassisBase : public I2c
   public:
     /*Constructor:
      * inputs:
-     * bus - i2c bus number to use
+     * index - index of device
      * address - i2c address to use
      * arbitrator - is bus arbitrated or not
      * imageName - path to the file holding update data
      */
-    DragonChassisBase(int bus, int address, bool arbitrator, char* imageName) :
-        bus(bus), address(address), arb(arbitrator), imageName(imageName),
+    DragonChassisBase(int index, int address, bool arbitrator,
+                      char* imageName) :
+        devIdx(index),
+        address(address), arb(arbitrator), imageName(imageName),
         image(nullptr){};
 
     virtual ~DragonChassisBase()
@@ -100,6 +102,9 @@ class DragonChassisBase : public I2c
                 break;
             case static_cast<int>(UpdateError::ERROR_STAT_IMAGE):
                 msg = "UpdateError::ERROR_STAT_IMAGE";
+                break;
+            case static_cast<int>(UpdateError::ERROR_SEEK_IMAGE):
+                msg = "UpdateError::ERROR_SEEK_IMAGE";
                 break;
             case static_cast<int>(UpdateError::ERROR_WRONG_MANUFACTURER):
                 msg = "UpdateError::ERROR_WRONG_MANUFACTURER";
@@ -244,17 +249,20 @@ class DragonChassisBase : public I2c
         ERROR_INVALID_DEVICE_ID = 38,
         ERROR_READ_CPLD_REFRESH_TIMEOUT_ZERO = 39,
         ERROR_FAILED_TO_GET_GPIO = 40,
+        ERROR_SEEK_IMAGE = 41
     };
 
   protected:
-    int bus;                 // i2 bus number
-    int address;             // i2c address
-    bool arb;                // is arbitrator needed?
-    bool rawLattice;         // are we directly talking to Lattice part?
-    char* imageName;         // path to image file
-    char* image;             // pointer to the image read in the memory
-    int imageSize;           // size of the image in the memory
-    int fd;                  // image file descriptor
+    int devIdx;      // index of device
+    int address;     // i2c address
+    bool arb;        // is arbitrator needed?
+    bool rawLattice; // are we directly talking to Lattice part?
+    char* imageName; // path to image file
+    char* image;     // pointer to the image read in the memory
+    int imageSize;   // size of the image in the memory
+    int imageOffset; // number of bytes to skip from the beginning of the image
+                     // file
+    int fd;          // image file descriptor
     std::array<uint8_t, 4> deviceIdArray;
     const int arbTrials = 5; // how many times to try to change arb state
 
@@ -390,7 +398,14 @@ class DragonChassisBase : public I2c
             ret = static_cast<int>(UpdateError::ERROR_STAT_IMAGE);
             goto close;
         }
-        imageSize = st.st_size;
+
+        if (lseek(loadFd, imageOffset, SEEK_SET) == -1)
+        {
+            ret = static_cast<int>(UpdateError::ERROR_SEEK_IMAGE);
+            goto close;
+        }
+
+        imageSize = st.st_size - imageOffset;
         if (imageSize <= 0)
         {
             ret = static_cast<int>(UpdateError::ERROR_STAT_IMAGE);
