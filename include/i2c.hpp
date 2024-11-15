@@ -44,6 +44,9 @@ enum class Status
     ERROR_UNKNOW = 0xff,
 };
 
+#define I2C_MAX_RETRY 50
+#define RETRY_SLEEP_MS 100
+
 /**
  * I2c is a global  handler.
  */
@@ -149,12 +152,40 @@ class I2c : public Crc
             msgset.nmsgs = 1;
         }
 
-        int ioError = ioctl(busFd, I2C_RDWR, &msgset);
+        int retry = I2C_MAX_RETRY;
+        int sleepMs = RETRY_SLEEP_MS;
+        int ioError = 0;
+        do
+        {
+            ioError = ioctl(busFd, I2C_RDWR, &msgset);
+
+            if (ioError < 0)
+            {
+                // Retry when get these errors
+                if (errno == EIO || errno == ENXIO || errno == EBUSY ||
+                    errno == ETIMEDOUT || errno == EAGAIN)
+                {
+                    usleep(sleepMs * 1000);
+                }
+                else
+                {
+                    std::fprintf(
+                        stderr,
+                        "I2c::transfer I2C_RDWR ioError=%d errno=%s(%d)\n",
+                        ioError, strerror(errno), -errno);
+                    return static_cast<int>(
+                        Status::ERROR_IOCTL_I2C_RDWR_FAILURE); // I2C_RDWR I/O
+                                                               // error
+                }
+            }
+        } while (ioError < 0 && (retry--));
 
         if (ioError < 0)
         {
-            std::fprintf(stderr, "I2c::transfer I2C_RDWR ioError=%d errno=%s\n",
-                         ioError, strerror(errno));
+            std::fprintf(
+                stderr,
+                "I2c::transfer I2C_RDWR ioError=%d errno=%s(%d), exceeds the max retry: %d\n",
+                ioError, strerror(errno), -errno, I2C_MAX_RETRY);
             return static_cast<int>(
                 Status::ERROR_IOCTL_I2C_RDWR_FAILURE); // I2C_RDWR I/O error
         }
