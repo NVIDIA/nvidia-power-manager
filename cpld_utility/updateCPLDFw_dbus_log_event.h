@@ -27,6 +27,17 @@
 #define LOG_CREATE_FUNCTION "Create"
 #define LOG_CREATE_SIGNATURE "ssa{ss}"
 
+constexpr const char* target_deter = "TargetDetermined";
+constexpr const char* ver_failed = "VerificationFailed";
+constexpr const char* update_succ = "UpdateSuccessful";
+constexpr const char* await_act = "AwaitToAcivate";
+constexpr const char* perf_power =
+    "Perform AC Power Cycle to activate programmed Firmware";
+constexpr const char* sev_info =
+    "xyz.openbmc_project.Logging.Entry.Level.Informational";
+constexpr const char* sev_crit =
+    "xyz.openbmc_project.Logging.Entry.Level.Critical";
+
 /* no return, we will call and fail silently if busctl isn't present */
 void emitLogMessage(const char* message, const char* arg0, const char* arg1,
                     const char* severity, const char* resolution);

@@ -63,6 +63,7 @@ class DragonCpld : public DragonChassisBase
     int cpldRawBus;     // non-arbitrated version of arbitrated bus
     int numOfPagesWritten;
     const char* config; // path to config file
+    std::string devName;
     // this code is used on another program that does not use arbitration
     // in this case the refresh gpio must be handled in this code instead
     // of the arbitration driver
