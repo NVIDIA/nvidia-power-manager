@@ -72,15 +72,6 @@ int flash_remote_mb_fpga_image(int bus, int image_sel, char* image,
     int ret = 0;
     int pages;
     unsigned int i;
-    const char* target_deter = "TargetDetermined";
-    const char* ver_failed = "VerificationFailed";
-    const char* update_succ = "UpdateSuccessful";
-    const char* await_act = "AwaitToAcivate";
-    const char* perf_power =
-        "Perform AC Power Cycle to activate programmed Firmware";
-    const char* sev_info =
-        "xyz.openbmc_project.Logging.Entry.Level.Informational";
-    const char* sev_crit = "xyz.openbmc_project.Logging.Entry.Level.Critical";
     ssize_t read_ret;
 
     sprintf(i2c_device, "/dev/i2c-%d", bus);

@@ -17,6 +17,8 @@
 
 #include "dragonCpld.hpp"
 
+#include "updateCPLDFw_dbus_log_event.h"
+
 #include <nlohmann/json.hpp>
 
 #include <fstream>
@@ -28,6 +30,8 @@
 #define PAGE_SIZE 16
 #define REFRESH_GPIO_NAME "CPLD_REFRESH_IN_PRGRS_L-I"
 #define I2C_RETRY_ATTEMPTS 5
+
+extern const char* versionStr;
 
 DragonCpld::DragonCpld(int devIdx, char* imageName, const char* config) :
     DragonChassisBase(devIdx, 0, true, imageName), config(config)
@@ -81,6 +85,8 @@ int DragonCpld::fwUpdate()
     if (ret)
         goto close_cpld_fd;
 
+    emitLogMessage(target_deter, devName.c_str(), versionStr, sev_info, NULL);
+
     ret = enableConfigurationInterface();
     if (ret)
         goto close_cpld_fd;
@@ -88,9 +94,13 @@ int DragonCpld::fwUpdate()
     ret = sendImage();
     if (ret)
         goto close_cpld_fd;
+
+    emitLogMessage(update_succ, devName.c_str(), versionStr, sev_info, NULL);
+
     ret = activate();
     if (ret)
         goto close_cpld_fd;
+
 close_cpld_fd:
     close(cpldRegFd);
 
@@ -238,8 +248,6 @@ int DragonCpld::sendImage()
     // done sending image command from Lattice specification
     uint8_t cmdDone[] = {0x5E, 0x00, 0x00, 0x00};
     uint8_t cmdSetPage[] = {0xB4, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    uint8_t readPage[] = {0x73, 0x00, 0x00, 0x01};
-    char readBuffer[PAGE_SIZE];
     int pageNum = 0;
     int remaining = imageSize;
     const int timeout = 5;
@@ -303,6 +311,9 @@ int DragonCpld::sendImage()
         ret = validate();
         if (!ret)
             break;
+        else
+            emitLogMessage(ver_failed, devName.c_str(), versionStr, sev_crit,
+                           NULL);
     }
 
     if (ret)
@@ -385,7 +396,6 @@ int DragonCpld::validate()
     uint8_t failDataI2c[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
                              0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
     char readBuffer[PAGE_SIZE];
-    char* returnData;
     int ret = 0;
     int imageOffset = 0;
     bool compareFailed = false;
@@ -556,6 +566,7 @@ int DragonCpld::loadConfig()
                 std::string cpldRaB = cpldInfo.at("CpldRawBus");
                 cpldRawBus = stoi(cpldRaB);
                 imageOffset = cpldInfo.at("ImageOffset");
+                devName = cpldInfo.at("Name");
                 found = true;
                 for (size_t i = 0; i < deviceIdArray.size(); ++i)
                 {
