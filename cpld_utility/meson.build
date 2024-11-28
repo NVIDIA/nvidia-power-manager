@@ -1,4 +1,4 @@
-sources = ['main.cpp','libcpld.cpp','libi2c.cpp','updateCPLDFw_dbus_log_event.cpp']
+sources = ['main.cpp','libcpld.cpp','libi2c.cpp','updateCPLDFw_dbus_log_event.cpp', 'utils.cpp']
 depend = [sdbusplus, sdeventplus, phosphor_logging, phosphor_dbus_interfaces, fmt]
 arg = []
 if get_option('dragon_chassis_cpld').enabled()
@@ -13,4 +13,4 @@ executable('cpldupdate', sources,
                cpp_args : arg,
                install : true,
                install_dir : get_option('bindir'))
-install_headers('libcpld.h','libi2c.h','updateCPLDFw_dbus_log_event.h')
+install_headers('libcpld.h','libi2c.h','updateCPLDFw_dbus_log_event.h', 'utils.hpp')

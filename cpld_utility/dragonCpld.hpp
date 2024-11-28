@@ -95,6 +95,11 @@ class DragonCpld : public DragonChassisBase
     int readDeviceId();
 
     /*
+     * readFwVersion - reads FW version of the CPLD
+     */
+    std::string readFwVersion();
+
+    /*
      * cleanUp matches expactation of Lattice CPLD update flow
      * in clean up stage
      */
