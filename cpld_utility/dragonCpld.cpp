@@ -19,6 +19,8 @@
 
 #include "updateCPLDFw_dbus_log_event.h"
 
+#include "utils.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <fstream>
@@ -47,6 +49,8 @@ DragonCpld::~DragonCpld()
 int DragonCpld::fwUpdate()
 {
     int ret = 0;
+    std::string newFwVersion{};
+    std::string objPath{};
 
     ret = loadConfig();
     if (ret)
@@ -100,6 +104,13 @@ int DragonCpld::fwUpdate()
     ret = activate();
     if (ret)
         goto close_cpld_fd;
+
+    newFwVersion = readFwVersion();
+    if (!newFwVersion.empty())
+    {
+        objPath = swBasePath + devName;
+        setFwVersion(objPath, newFwVersion);
+    }
 
 close_cpld_fd:
     close(cpldRegFd);
@@ -167,6 +178,50 @@ int DragonCpld::readDeviceId()
             return static_cast<int>(UpdateError::ERROR_INVALID_DEVICE_ID);
 end:
     return 0;
+}
+
+std::string DragonCpld::readFwVersion()
+{
+    // read device id command from Lattice specification
+    uint8_t cmd[] = {0xc0, 0x00, 0x00};
+    uint8_t fwVer[4];
+    int ret = 0;
+    int txLen = size(cmd) / sizeof(cmd[0]);
+    int rxLen = size(fwVer) / sizeof(fwVer[0]);
+
+    ret = transferWithRetry(fd, 1, address, (uint8_t*)cmd, fwVer, txLen, rxLen,
+                            I2C_RETRY_ATTEMPTS);
+    if (ret)
+        return {};
+
+    // Make it to string for updating FW version D-Bus property
+    std::stringstream version;
+    version << std::hex << std::setfill('0');
+    bool validVersion = false;
+    for (int i = 0; i < rxLen; i++)
+    {
+        if (fwVer[i])
+        {
+            validVersion = true;
+        }
+
+        version << "0x" << std::setw(2) << static_cast<int>(fwVer[i]);
+        if (i < rxLen - 1)
+        {
+            version << " "; // Add space only between bytes
+        }
+    }
+
+    if (validVersion)
+    {
+        return version.str();
+    }
+    else
+    {
+        phosphor::logging::log<phosphor::logging::level::ERR>(
+            "Invalid Firmware Version");
+        return {};
+    }
 }
 
 int DragonCpld::enableConfigurationInterface()
