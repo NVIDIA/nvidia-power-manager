@@ -376,25 +376,34 @@ class Property
                         }
                         else if (propertyname == "PowerCapPercentage")
                         {
-                            /* power cap units are (%), boundaries validation
-                             * unnecessary. */
-                            if (newPropertyValue <= 100 &&
-                                newPropertyValue >= 0)
-                            {
-                                _value = newPropertyValue;
-                                powerCapInfo.modulePowerLimitPercentage[index] =
-                                    _value;
-                                iface->signal_property(propertyname);
-                                propertyChangeFunc(_value);
-                            }
-                            else
+                            /* power cap units are (%), boundaries validation */
+
+                            /* round down*/
+                            uint32_t requested = static_cast<uint32_t>(
+                                (powerCapInfo.modulePowerLimit_Max[index] *
+                                 newPropertyValue) /
+                                100);
+
+                            if (newPropertyValue > 100 ||
+                                requested <
+                                    powerCapInfo.modulePowerLimit_Min[index])
                             {
                                 std::cerr
-                                    << "Current Chassis Limit value should be between 100-0"
-                                    << std::endl;
+                                    << "Requested value is out of range ["
+                                    << powerCapInfo.modulePowerLimit_Min[index]
+                                    << ","
+                                    << powerCapInfo.modulePowerLimit_Max[index]
+                                    << "]" << std::endl;
+
                                 throw sdbusplus::xyz::openbmc_project::Common::
                                     Error::NotAllowed();
                             }
+
+                            _value = newPropertyValue;
+                            powerCapInfo.modulePowerLimitPercentage[index] =
+                                _value;
+                            iface->signal_property(propertyname);
+                            propertyChangeFunc(_value);
                         }
                         else if (propertyname == "MaxPowerCapValue")
                         {
