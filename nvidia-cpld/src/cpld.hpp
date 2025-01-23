@@ -148,7 +148,7 @@ class Cpld : public CpldInherit, public Util
                                              "Item.Chassis.ChassisType.Module");
         sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis::type(
             chassisType);
-        registerAssociationInterface(bus, objPath);
+        registerAssociationInterface(bus, objPath, assoc);
         registerSoftwareVersion(bus, objPath);
         if (!assoc.empty())
         {
@@ -165,15 +165,22 @@ class Cpld : public CpldInherit, public Util
     }
 
     void registerAssociationInterface(sdbusplus::bus::bus& bus,
-                                      const std::string& ifPath)
+                                      const std::string& ifPath,
+                                      const std::string& assoc)
     {
         AssociationList fwAssociation;
         std::string swpath = SW_INV_PATH;
         std::string fName = std::filesystem::path(ifPath).filename().string();
+
         fName.insert(strlen(PLATFORM_PREFIX), PLATFORM_FW_PREFIX);
         swpath += "/" + fName;
-        fwAssociation.emplace_back(
-            std::make_tuple("inventory", "activation", swpath));
+
+        if (!assoc.empty())
+        {
+            fwAssociation.emplace_back(
+                std::make_tuple("inventory", "activation", assoc));
+        }
+
         fwAssociation.emplace_back(std::make_tuple(
             upFwdAssociation, upRevAssociation, softwareUpdateablePath));
 
