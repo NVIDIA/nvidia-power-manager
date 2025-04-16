@@ -61,6 +61,25 @@ using PropertyType = std::variant<std::string, bool>;
 
 using Properties = std::map<std::string, PropertyType>;
 
+using AssetObject = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset>;
+
+class SoftwareAsset : public AssetObject
+{
+  public:
+    SoftwareAsset(sdbusplus::bus::bus& bus, const std::string& path,
+                  const std::string& manufacturer, const std::string& model,
+                  const std::string& partNumber,
+                  const std::string& serialNumber) :
+        AssetObject(bus, path.c_str(), action::emit_interface_added)
+    {
+        this->manufacturer(manufacturer);
+        this->model(model);
+        this->partNumber(partNumber);
+        this->serialNumber(serialNumber);
+    }
+};
+
 class VersionInterface : public VersionObject
 {
   public:
@@ -150,6 +169,7 @@ class Cpld : public CpldInherit, public Util
             chassisType);
         registerAssociationInterface(bus, objPath, assoc);
         registerSoftwareVersion(bus, objPath);
+        createSoftwareAsset(bus, objPath);
         if (!assoc.empty())
         {
             createAssociation(assoc);
@@ -218,6 +238,21 @@ class Cpld : public CpldInherit, public Util
         associations(assocs);
     }
 
+    /**
+     * @brief Create Asset interface under software inventory path
+     */
+    void createSoftwareAsset(sdbusplus::bus::bus& bus,
+                             const std::string& ifPath)
+    {
+        std::string swpath = SW_INV_PATH;
+        std::string fName = std::filesystem::path(ifPath).filename().string();
+        fName.insert(strlen(PLATFORM_PREFIX), PLATFORM_FW_PREFIX);
+        swpath += "/" + fName;
+
+        softwareAsset = std::make_unique<SoftwareAsset>(
+            bus, swpath, manufacturer(), model(), partNumber(), serialNumber());
+    }
+
   private:
     /** @brief systemd bus member */
     sdbusplus::bus::bus& bus;
@@ -229,6 +264,7 @@ class Cpld : public CpldInherit, public Util
     const std::string purpose =
         "xyz.openbmc_project.Software.Version.VersionPurpose.Other";
     const std::string softwareUpdateablePath = "/xyz/openbmc_project/software";
+    std::unique_ptr<SoftwareAsset> softwareAsset;
 };
 
 } // namespace nvidia::cpld::device
