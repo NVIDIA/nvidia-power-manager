@@ -23,7 +23,7 @@
 #include "utils.hpp"
 
 #include <boost/asio/deadline_timer.hpp>
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 #include <xyz/openbmc_project/State/Decorator/PowerState/server.hpp>
@@ -76,7 +76,7 @@ class PsuMonitor
      * @param dbud service
      * @param psuevents container object
      */
-    PsuMonitor(boost::asio::io_service& io,
+    PsuMonitor(boost::asio::io_context& io,
                std::vector<std::shared_ptr<PsuEvent>>& pEvents);
 
     ~PsuMonitor();
