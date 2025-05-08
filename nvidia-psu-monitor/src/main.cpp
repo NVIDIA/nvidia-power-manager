@@ -18,7 +18,7 @@
 #include "PsuEvent.hpp"
 #include "PsuMonitor.hpp"
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 
@@ -39,7 +39,7 @@ int main(void)
 
     try
     {
-        boost::asio::io_service io;
+        boost::asio::io_context io;
         auto systemBus = std::make_shared<sdbusplus::asio::connection>(io);
 
         systemBus->request_name("com.Nvidia.PsuEvent");

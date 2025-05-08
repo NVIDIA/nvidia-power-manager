@@ -41,7 +41,7 @@ int main(void)
         auto bus = sdbusplus::bus::new_default();
         auto event = sdeventplus::Event::get_default();
         bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-        boost::asio::io_service io;
+        boost::asio::io_context io;
         auto systemBus = std::make_shared<sdbusplus::asio::connection>(io);
 
         systemBus->request_name(BUSNAME);
