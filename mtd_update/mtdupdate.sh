@@ -26,14 +26,16 @@ if [ -n "$3" ]; then
     target="$3"
 fi
 
-#send fw update task a message that update has started
-busctl call xyz.openbmc_project.Logging /xyz/openbmc_project/logging xyz.openbmc_project.Logging.Create Create ssa{ss} Update.1.0.TransferringToComponent xyz.openbmc_project.Logging.Entry.Level.Informational 3 'REDFISH_MESSAGE_ARGS' " ,${target}" 'REDFISH_MESSAGE_ID' 'Update.1.0.TransferringToComponent' 'namespace' 'FWUpdate'
-
 if [ -f "$setup_file" ] && [ -x "$setup_file" ]; then
 #use paramter 1 to inform underlying script that it is executing during
 #regular fw update process
     result=$("$setup_file" 1)
     exit_code=$?
+
+    #if 255 is returned it means update should not be done
+    if [ $exit_code -eq 255 ]; then
+        exit 0
+    fi
 
     if [ $exit_code -ne 0 ]; then
         #send fw update task a message that update has failed
@@ -44,6 +46,8 @@ if [ -f "$setup_file" ] && [ -x "$setup_file" ]; then
         exit $exit_code
     fi
 fi
+#send fw update task a message that update has started
+busctl call xyz.openbmc_project.Logging /xyz/openbmc_project/logging xyz.openbmc_project.Logging.Create Create ssa{ss} Update.1.0.TransferringToComponent xyz.openbmc_project.Logging.Entry.Level.Informational 3 'REDFISH_MESSAGE_ARGS' " ,${target}" 'REDFISH_MESSAGE_ID' 'Update.1.0.TransferringToComponent' 'namespace' 'FWUpdate'
 
 tail -c +4097 $1 > /run/initramfs/image-$2
 
