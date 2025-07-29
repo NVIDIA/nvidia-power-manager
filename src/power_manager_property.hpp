@@ -187,8 +187,7 @@ class Property
              std::shared_ptr<sdbusplus::asio::dbus_interface> enabledInterface,
              nlohmann::json Jsondata, PowerCappingInfo& powerCappingInfo,
              std::string module, PropertyChangeCallback&& propertyChangeFunc) :
-        Bus(bus),
-        iface(enabledInterface), propJson(Jsondata),
+        Bus(bus), iface(enabledInterface), propJson(Jsondata),
         powerCapInfo(powerCappingInfo), powerModule(module)
     {
         propertyname = propJson["propertyName"];

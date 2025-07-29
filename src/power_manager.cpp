@@ -196,8 +196,7 @@ namespace manager
 
 PowerManager::PowerManager(sdbusplus::bus::bus& bus,
                            sdbusplus::asio::object_server& objectServer) :
-    bus(bus),
-    objServer(objectServer)
+    bus(bus), objServer(objectServer)
 {
     using namespace sdeventplus;
 

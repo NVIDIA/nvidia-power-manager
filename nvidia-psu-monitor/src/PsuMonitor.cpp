@@ -376,10 +376,10 @@ void PsuMonitor::start()
 }
 
 PsuMonitor::PsuMonitor(boost::asio::io_context& io,
-                       std::vector<std::shared_ptr<PsuEvent>>& pEvents)
-    : psuEvents(pEvents), mPollTimer(io), bus(-1), slaveAddress(-1), detectRegAddr(-1),
-      alertRegAddr(-1), workRegAddr(-1), psuDropRegAddr(-1), detectRegValue(-1),
-      alertRegValue(-1), workRegValue(-1), psuDropRegValue(-1)
+                       std::vector<std::shared_ptr<PsuEvent>>& pEvents) :
+    psuEvents(pEvents), mPollTimer(io), bus(-1), slaveAddress(-1),
+    detectRegAddr(-1), alertRegAddr(-1), workRegAddr(-1), psuDropRegAddr(-1),
+    detectRegValue(-1), alertRegValue(-1), workRegValue(-1), psuDropRegValue(-1)
 {}
 
 PsuMonitor::~PsuMonitor()

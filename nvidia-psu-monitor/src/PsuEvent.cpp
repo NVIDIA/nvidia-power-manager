@@ -29,8 +29,7 @@ namespace nvidia::psumonitor::event
  */
 PsuEvent::PsuEvent(const std::string& name,
                    sdbusplus::asio::object_server& objectServer) :
-    objServer(objectServer),
-    name(std::move(name))
+    objServer(objectServer), name(std::move(name))
 {
     enabledInterface =
         objServer.add_interface("/xyz/openbmc_project/sensors/power/" + name,

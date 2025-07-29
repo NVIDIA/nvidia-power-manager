@@ -137,8 +137,7 @@ class Cpld : public CpldInherit, public Util
          uint8_t address, const std::string& name, const std::string& modelN,
          const std::string& manufacturerN, const std::string& assoc,
          const std::string& locationTypeN) :
-        CpldInherit(bus, (objPath).c_str()),
-        bus(bus)
+        CpldInherit(bus, (objPath).c_str()), bus(bus)
     {
 
         b = busN;

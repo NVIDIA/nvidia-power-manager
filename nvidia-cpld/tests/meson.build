@@ -8,20 +8,18 @@ if not gtest_dep.found() or not gmock_dep.found()
                 dependency('threads'),
                 gtest_proj.dependency('gtest'),
                 gtest_proj.dependency('gtest_main'),
-            ]
+            ],
         )
         gmock_dep = gtest_proj.dependency('gmock')
     else
         assert(
             not get_option('tests').enabled(),
-            'Googletest is required if tests are enabled'
+            'Googletest is required if tests are enabled',
         )
     endif
 endif
 
-configure_file(output: 'config.h',
-              configuration : cdata,
-              )
+configure_file(output: 'config.h', configuration: cdata)
 
 test(
     'test_cpld',
@@ -39,6 +37,6 @@ test(
         ],
         implicit_include_directories: false,
         include_directories: '../src',
-    )
+    ),
 )
 

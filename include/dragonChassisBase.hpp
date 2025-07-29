@@ -45,9 +45,8 @@ class DragonChassisBase : public I2c
      */
     DragonChassisBase(int index, int address, bool arbitrator,
                       char* imageName) :
-        devIdx(index),
-        address(address), arb(arbitrator), imageName(imageName),
-        image(nullptr){};
+        devIdx(index), address(address), arb(arbitrator), imageName(imageName),
+        image(nullptr) {};
 
     virtual ~DragonChassisBase()
     {
