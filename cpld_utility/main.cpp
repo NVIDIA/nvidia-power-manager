@@ -20,7 +20,7 @@
 #endif
 
 #include "libcpld.h"
-#define MAX_I2C_BUS_NUMBER 42
+#define MAX_I2C_BUS_NUMBER 255
 
 const char* DEFAULT_VERSION = "Unknown";
 int debug_l;
