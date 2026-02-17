@@ -14,17 +14,37 @@ run_command() {
     return $exit_code
 }
 
-if [ $# -ne 2 ] && [ $# -ne 3 ]; then
+if [ $# -lt 2 ] || [ $# -gt 4 ]; then
+    echo "Usage: $0 <input_file> <image_name> [target] [nostrip]"
+    echo "  input_file:   The firmware image file to update"
+    echo "  image_name:  Name used for setup/cleanup scripts (setup_<image_name>.sh)"
+    echo "  target:       Optional target name for logging (defaults to image_name)"
+    echo "  nostrip:      Optional flag to copy file without stripping first 4096 bytes"
     exit 1
 fi
 
-setup_file="/usr/bin/setup_$2.sh"
-cleanup_file="/usr/bin/cleanup_$2.sh"
-
+# Check for nostrip option
+nostrip=0
+input_file="$1"
+image_name="$2"
 target="$2"
-if [ -n "$3" ]; then
-    target="$3"
+
+# Check all arguments for nostrip flag
+for arg in "$@"; do
+    if [ "$arg" = "nostrip" ]; then
+        nostrip=1
+    fi
+done
+
+# Find target name (third argument if it exists and is not nostrip)
+if [ $# -ge 3 ]; then
+    if [ "$3" != "nostrip" ]; then
+        target="$3"
+    fi
 fi
+
+setup_file="/usr/bin/setup_${image_name}.sh"
+cleanup_file="/usr/bin/cleanup_${image_name}.sh"
 
 if [ -f "$setup_file" ] && [ -x "$setup_file" ]; then
 #use paramter 1 to inform underlying script that it is executing during
@@ -49,13 +69,17 @@ fi
 #send fw update task a message that update has started
 busctl call xyz.openbmc_project.Logging /xyz/openbmc_project/logging xyz.openbmc_project.Logging.Create Create ssa{ss} Update.1.0.TransferringToComponent xyz.openbmc_project.Logging.Entry.Level.Informational 3 'REDFISH_MESSAGE_ARGS' " ,${target}" 'REDFISH_MESSAGE_ID' 'Update.1.0.TransferringToComponent' 'namespace' 'FWUpdate'
 
-tail -c +4097 $1 > /run/initramfs/image-$2
+if [ $nostrip -eq 1 ]; then
+    cp "$input_file" "/run/initramfs/image-${image_name}"
+else
+    tail -c +4097 "$input_file" > "/run/initramfs/image-${image_name}"
+fi
 
 #calculate md5sum of the update image to
 #be used by the cleanup script for verification
 #of the update process
-expected_md5sum=$(md5sum "/run/initramfs/image-$2" | awk '{print $1}')
-expected_size=$(stat -c%s "/run/initramfs/image-$2")
+expected_md5sum=$(md5sum "/run/initramfs/image-${image_name}" | awk '{print $1}')
+expected_size=$(stat -c%s "/run/initramfs/image-${image_name}")
 cd /run/initramfs
 result=$(run_command "./update")
 exit_code=$?
