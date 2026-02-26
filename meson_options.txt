@@ -10,6 +10,12 @@ option(
     value: 'disabled',
     description: 'Add Dragon CPLD update into the build',
 )
+option(
+    'power_balancer',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Build and install NVIDIA Power Balancer service',
+)
 option('tests', type: 'feature', value: 'enabled', description: 'Build tests.')
 option(
     'module_num',
@@ -36,4 +42,12 @@ option(
     type: 'string',
     value: '',
     description: 'platform prefix',
+)
+option(
+    'job_monitor_timeout_seconds',
+    type: 'integer',
+    min: 10,
+    max: 300,
+    value: 60,
+    description: 'Timeout in seconds for job monitor async operations',
 )
