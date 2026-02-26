@@ -14,3 +14,7 @@ subdir('nvidia-psu-monitor')
 subdir('cpld_utility')
 subdir('src')
 subdir('mtd_update')
+
+if get_option('power_balancer').enabled()
+    subdir('nvidia-power-balancer')
+endif

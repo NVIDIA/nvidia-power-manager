@@ -1,0 +1,14 @@
+[Unit]
+Description=NVIDIA Power Balancer Service
+After=xyz.openbmc_project.EntityManager.service
+Requires=xyz.openbmc_project.EntityManager.service
+
+[Service]
+Restart=always
+Type=dbus
+BusName=com.Nvidia.PowerBalancer
+ExecStart=/usr/bin/nvidia-power-balancerd
+SyslogIdentifier=nvidia-power-balancerd
+
+[Install]
+WantedBy=multi-user.target
