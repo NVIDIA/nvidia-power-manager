@@ -79,7 +79,8 @@ class JobMonitor : public std::enable_shared_from_this<JobMonitor>
         return jobPath_;
     }
 
-  private:
+  protected:
+    // Protected constructor for unit testing
     JobMonitor(std::shared_ptr<sdbusplus::asio::connection> bus,
                const std::string& serviceName, const std::string& jobPath,
                const std::string& deviceName,
@@ -87,7 +88,12 @@ class JobMonitor : public std::enable_shared_from_this<JobMonitor>
                std::chrono::seconds timeoutSeconds,
                CompletionCallback callback);
 
-    void start();
+    // Testable methods - exposed as protected for unit testing
+    void handleStatus(std::string status);
+    void complete(bool success);
+
+    // Members in initializer list order (must maintain order for
+    // -Werror=reorder)
     std::shared_ptr<sdbusplus::asio::connection> bus_;
     std::string serviceName_;
     std::string jobPath_;
@@ -101,10 +107,10 @@ class JobMonitor : public std::enable_shared_from_this<JobMonitor>
     std::unique_ptr<boost::asio::steady_timer> timer_;
     bool completed_ = false;
 
+  private:
+    void start();
     void handleStatusChanged(sdbusplus::message::message& msg);
-    void handleStatus(std::string status);
     void handleTimeout(const boost::system::error_code& ec);
-    void complete(bool success);
 };
 
 } // namespace nvidia::power::balancer
