@@ -56,7 +56,7 @@ struct DeviceInfo
     std::string objectPath;
     std::string interfaceName;
     std::string propertyName;
-    uint32_t powerCapValue;
+    uint32_t powerCapValue = DefaultPowerCap;
     std::shared_ptr<JobMonitor> jobMonitor = nullptr;
     std::unique_ptr<sdbusplus::bus::match_t> powerCapChangedSignal;
     std::unique_ptr<sdbusplus::bus::match_t> powerCapInterfaceAddedSignal;
@@ -74,6 +74,52 @@ class GpuCpuPowerSync
     GpuCpuPowerSync(std::shared_ptr<sdbusplus::asio::connection> bus);
     ~GpuCpuPowerSync() = default;
     void run();
+
+  protected:
+    // Testable methods - exposed as protected for unit testing
+    std::string extractServiceName(
+        DeviceType type, const std::map<std::string, std::vector<std::string>>&
+                             servicesAndInterfaces);
+
+    void updateDeviceInfo(DeviceInfo& deviceInfo, const std::string& objectPath,
+                          const std::string& serviceName,
+                          const std::string& interfaceName,
+                          const std::string& propertyName,
+                          uint32_t powerCapValue);
+
+    void processAssociationEndpoints(DeviceType type,
+                                     const std::string& deviceName,
+                                     const std::string& locationContext,
+                                     const std::vector<std::string>& endpoints);
+
+    void syncPowerCapForAllGpus(const std::string& locationContext);
+
+    void onServiceDiscovered(
+        DeviceType type, const std::string& deviceName,
+        const std::string& locationContext, const std::string& powerLimitPath,
+        boost::system::error_code ec,
+        const std::map<std::string, std::vector<std::string>>&
+            servicesAndInterfaces);
+
+    void onPowerCapRetrieved(DeviceType type, const std::string& deviceName,
+                             const std::string& locationContext,
+                             const std::string& powerLimitPath,
+                             const std::string& serviceName,
+                             boost::system::error_code ec, uint32_t powerCap);
+
+    void onLocationContextFetched(DeviceType type,
+                                  const std::string& objectPath,
+                                  boost::system::error_code ec,
+                                  std::string locationContext);
+
+    void onDeviceTypeResolved(
+        const std::string& objectPath, const std::string& locationContext,
+        boost::system::error_code ec,
+        const std::map<std::string, std::vector<std::string>>&
+            servicesAndInterfaces);
+
+    // Testable state
+    std::map<std::string, moduleDeviceInfo> platformCpuGpuMap;
 
   private:
     std::shared_ptr<sdbusplus::asio::connection> bus_;
@@ -110,60 +156,20 @@ class GpuCpuPowerSync
                                             const std::string& locationContext);
     void setPowerCapOnGpu(const std::string& deviceName,
                           const std::string& locationContext);
-    void syncPowerCapForAllGpus(const std::string& locationContext);
     void registerPowerCapSignalHandlers(DeviceType type, DeviceInfo& deviceInfo,
                                         const std::string& deviceName,
                                         const std::string& locationContext,
                                         const std::string& powerLimitPath);
-    void updateDeviceInfo(DeviceInfo& deviceInfo, const std::string& objectPath,
-                          const std::string& serviceName,
-                          const std::string& interfaceName,
-                          const std::string& propertyName,
-                          uint32_t powerCapValue);
-
-    void onServiceDiscovered(
-        DeviceType type, const std::string& deviceName,
-        const std::string& locationContext, const std::string& powerLimitPath,
-        boost::system::error_code ec,
-        const std::map<std::string, std::vector<std::string>>&
-            servicesAndInterfaces);
-
-    void onPowerCapRetrieved(DeviceType type, const std::string& deviceName,
-                             const std::string& locationContext,
-                             const std::string& powerLimitPath,
-                             const std::string& serviceName,
-                             boost::system::error_code ec, uint32_t powerCap);
-
-    std::string extractServiceName(
-        DeviceType type, const std::map<std::string, std::vector<std::string>>&
-                             servicesAndInterfaces);
-
-    void processAssociationEndpoints(DeviceType type,
-                                     const std::string& deviceName,
-                                     const std::string& locationContext,
-                                     const std::vector<std::string>& endpoints);
 
     void fetchLocationContextAndDiscover(DeviceType type,
                                          const std::string& objectPath);
 
-    void onLocationContextFetched(DeviceType type,
-                                  const std::string& objectPath,
-                                  boost::system::error_code ec,
-                                  std::string locationContext);
-
     void resolveDeviceTypeAndDiscover(const std::string& objectPath,
                                       const std::string& locationContext);
-
-    void onDeviceTypeResolved(
-        const std::string& objectPath, const std::string& locationContext,
-        boost::system::error_code ec,
-        const std::map<std::string, std::vector<std::string>>&
-            servicesAndInterfaces);
 
     std::unordered_map<std::string, sdbusplus::bus::match_t>
         associationsInterfaceAddedSignals;
     std::unordered_map<std::string, sdbusplus::bus::match_t>
         associationsPropertyChangedSignals;
-    std::map<std::string, moduleDeviceInfo> platformCpuGpuMap;
 };
 } // namespace nvidia::power::balancer
