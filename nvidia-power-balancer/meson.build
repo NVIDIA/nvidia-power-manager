@@ -19,29 +19,34 @@ phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 boost = dependency('boost')
 # fmt = dependency('fmt')
 
-# Build executable - ADD NAME AND SOURCE FILES HERE!
-executable(
-    'nvidia-power-balancerd',  # ← Executable name
-    'main.cpp',  # ← Source file
-    'jobMonitor.cpp',
-    'gpuCpuPowerSyncDiscovery.cpp',
-    'gpuCpuPowerSyncControl.cpp',
-    dependencies: [
-        sdbusplus,
-        sdeventplus,
-        phosphor_logging,
-        phosphor_dbus_interfaces,
-        boost,
-    ],
-    install: true,
-    install_dir: get_option('bindir'),
-    cpp_args: ['-Os'],
-)
+# Only build and install service when power_balancer is enabled
+if get_option('power_balancer').enabled()
+    # Build executable - ADD NAME AND SOURCE FILES HERE!
+    executable(
+        'nvidia-power-balancerd',  # ← Executable name
+        'main.cpp',  # ← Source file
+        'jobMonitor.cpp',
+        'gpuCpuPowerSyncDiscovery.cpp',
+        'gpuCpuPowerSyncControl.cpp',
+        dependencies: [
+            sdbusplus,
+            sdeventplus,
+            phosphor_logging,
+            phosphor_dbus_interfaces,
+            boost,
+        ],
+        install: true,
+        install_dir: get_option('bindir'),
+        cpp_args: ['-Os'],
+    )
 
-# Only install headers if you have them
-install_headers('utils.hpp')
+    # Only install headers if you have them
+    install_headers('utils.hpp')
 
-subdir('services')
+    subdir('services')
+endif
+
+build_tests = get_option('tests')
 
 if not build_tests.disabled()
     subdir('tests')
