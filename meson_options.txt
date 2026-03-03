@@ -10,6 +10,12 @@ option(
     value: 'disabled',
     description: 'Add Dragon CPLD update into the build',
 )
+option(
+    'power_balancer',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Build and install NVIDIA Power Balancer service',
+)
 option('tests', type: 'feature', value: 'enabled', description: 'Build tests.')
 option(
     'module_num',
