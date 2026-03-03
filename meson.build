@@ -14,4 +14,6 @@ subdir('nvidia-psu-monitor')
 subdir('cpld_utility')
 subdir('src')
 subdir('mtd_update')
+# Always include nvidia-power-balancer subdirectory for tests
+# The subdirectory will conditionally build the service based on power_balancer option
 subdir('nvidia-power-balancer')
