@@ -149,8 +149,8 @@ void GpuCpuPowerSync::emDeviceAddedHandler(sdbusplus::message::message& msg)
         return;
     }
 
-    lg2::info("emDeviceAddedHandler:: LocationContext {LOC} on {OBJECT_PATH}",
-              "LOC", locationContext, "OBJECT_PATH", objectPath);
+    lg2::debug("emDeviceAddedHandler:: LocationContext {LOC} on {OBJECT_PATH}",
+               "LOC", locationContext, "OBJECT_PATH", objectPath);
 
     resolveDeviceTypeAndDiscover(objectPath, locationContext);
 }
