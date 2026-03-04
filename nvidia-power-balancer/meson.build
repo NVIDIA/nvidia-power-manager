@@ -17,6 +17,7 @@ sdeventplus = dependency('sdeventplus')
 phosphor_logging = dependency('phosphor-logging')
 phosphor_dbus_interfaces = dependency('phosphor-dbus-interfaces')
 boost = dependency('boost')
+# fmt = dependency('fmt')
 
 # Build executable - ADD NAME AND SOURCE FILES HERE!
 executable(
@@ -41,3 +42,7 @@ executable(
 install_headers('utils.hpp')
 
 subdir('services')
+
+if not build_tests.disabled()
+    subdir('tests')
+endif
