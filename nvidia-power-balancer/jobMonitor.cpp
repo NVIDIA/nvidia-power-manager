@@ -204,11 +204,12 @@ void JobMonitor::handleStatus(std::string status)
                    jobPath_, "STATUS", status);
         complete(true);
         utils::logRedfishEventAsync(
-            bus_, "NvidiaResourceEvent.1.0.GPUViewCPULimitWattsSetFailed",
-            utils::LogSeverity::Warning,
-            {{"REDFISH_MESSAGE_ARGS", std::to_string(setPoint_) + "," +
-                                          deviceName_ + "," +
-                                          "D-Bus write operation failed"}});
+            bus_, "Base.1.19.InternalError", utils::LogSeverity::Critical,
+            {{"xyz.openbmc_project.Logging.Entry.Resolution",
+              "Setting GPUViewCPULimitWatts on \"" + deviceName_ +
+                  "\" with Value = \"" + std::to_string(setPoint_) +
+                  "\" failed. Verify GPU state. If the problem persists, "
+                  "consider resetting the service."}});
     }
     else
     {
@@ -217,11 +218,12 @@ void JobMonitor::handleStatus(std::string status)
 
         complete(true);
         utils::logRedfishEventAsync(
-            bus_, "NvidiaResourceEvent.1.0.GPUViewCPULimitWattsSetFailed",
-            utils::LogSeverity::Warning,
-            {{"REDFISH_MESSAGE_ARGS",
-              std::to_string(setPoint_) + "," + deviceName_ + "," +
-                  "Device Error for power cap setting"}});
+            bus_, "Base.1.19.InternalError", utils::LogSeverity::Critical,
+            {{"xyz.openbmc_project.Logging.Entry.Resolution",
+              "Setting GPUViewCPULimitWatts on \"" + deviceName_ +
+                  "\" with Value = \"" + std::to_string(setPoint_) +
+                  "\" failed. Verify GPU state. If the problem persists, "
+                  "consider resetting the service."}});
     }
 }
 
