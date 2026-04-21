@@ -23,7 +23,10 @@
 #include <sdbusplus/asio/connection.hpp>
 #include <sdbusplus/bus/match.hpp>
 
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #define AssociationInterface "xyz.openbmc_project.Association"
@@ -36,11 +39,40 @@
     "xyz.openbmc_project.Inventory.Decorator.LocationContext"
 #define PowerCapInterface "xyz.openbmc_project.Control.Power.Cap"
 #define PowerCapProperty "PowerCap"
+#define SensorValueInterface "xyz.openbmc_project.Sensor.Value"
+#define SensorValueProperty "Value"
+#define SensorObjectManagerPath "/xyz/openbmc_project/sensors"
+#define DefaultObjectManagerPath "/"
 #define DefaultPowerCap 0
 #define PowerCapInvalid 0xFFFFFFFF
 
 namespace nvidia::power::balancer
 {
+
+/**
+ * @brief Convert a double-typed sensor value to a uint32_t power cap.
+ *
+ * Guards against NaN, infinities, negative values, and values exceeding
+ * UINT32_MAX, all of which would result in undefined behavior when cast to
+ * uint32_t. Truncation (not rounding) is used for in-range positive values,
+ * matching typical power cap semantics.
+ *
+ * @param raw Raw double value read from D-Bus Sensor.Value.
+ * @param out Output uint32_t power cap, only valid when the function returns
+ *            true.
+ * @return true if raw is finite, non-negative, and within [0, UINT32_MAX];
+ *         false otherwise.
+ */
+inline bool doubleToPowerCap(double raw, uint32_t& out)
+{
+    if (std::isnan(raw) || std::isinf(raw) || raw < 0.0 ||
+        raw > static_cast<double>(std::numeric_limits<uint32_t>::max()))
+    {
+        return false;
+    }
+    out = static_cast<uint32_t>(raw);
+    return true;
+}
 
 enum class DeviceType
 {
@@ -101,11 +133,18 @@ class GpuCpuPowerSync
         const std::map<std::string, std::vector<std::string>>&
             servicesAndInterfaces);
 
-    void onPowerCapRetrieved(DeviceType type, const std::string& deviceName,
-                             const std::string& locationContext,
-                             const std::string& powerLimitPath,
-                             const std::string& serviceName,
-                             boost::system::error_code ec, uint32_t powerCap);
+    void onPowerCapRetrievedGpu(const std::string& deviceName,
+                                const std::string& locationContext,
+                                const std::string& powerLimitPath,
+                                const std::string& serviceName,
+                                boost::system::error_code ec,
+                                uint32_t powerCap);
+
+    void onPowerCapRetrievedCpu(const std::string& deviceName,
+                                const std::string& locationContext,
+                                const std::string& powerLimitPath,
+                                const std::string& serviceName,
+                                boost::system::error_code ec, double rawValue);
 
     void onLocationContextFetched(DeviceType type,
                                   const std::string& objectPath,

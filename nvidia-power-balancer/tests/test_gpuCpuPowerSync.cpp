@@ -21,7 +21,10 @@
 #include "utils.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -162,6 +165,95 @@ TEST(PowerCapConstantsTest, DefaultAndInvalidValues)
     EXPECT_EQ(PowerCapInvalid, 0xFFFFFFFFu);
 }
 
+// --- doubleToPowerCap helper tests ---
+// Tests for nvidia-power-balancer/gpuCpuPowerSync.hpp doubleToPowerCap()
+
+TEST(DoubleToPowerCapTest, ValidIntegerValuedDouble)
+{
+    uint32_t out = 0xDEADBEEF;
+    EXPECT_TRUE(doubleToPowerCap(450.0, out));
+    EXPECT_EQ(out, 450u);
+}
+
+TEST(DoubleToPowerCapTest, ValidFractionalDoubleTruncates)
+{
+    uint32_t out = 0;
+    EXPECT_TRUE(doubleToPowerCap(450.9, out));
+    EXPECT_EQ(out, 450u);
+}
+
+TEST(DoubleToPowerCapTest, ValidZero)
+{
+    uint32_t out = 42;
+    EXPECT_TRUE(doubleToPowerCap(0.0, out));
+    EXPECT_EQ(out, 0u);
+}
+
+TEST(DoubleToPowerCapTest, ValidUint32Max)
+{
+    uint32_t out = 0;
+    double maxAsDouble =
+        static_cast<double>(std::numeric_limits<uint32_t>::max());
+    EXPECT_TRUE(doubleToPowerCap(maxAsDouble, out));
+    EXPECT_EQ(out, std::numeric_limits<uint32_t>::max());
+}
+
+TEST(DoubleToPowerCapTest, RejectsNaN_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    EXPECT_FALSE(doubleToPowerCap(std::nan(""), out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
+TEST(DoubleToPowerCapTest, RejectsPositiveInfinity_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    EXPECT_FALSE(
+        doubleToPowerCap(std::numeric_limits<double>::infinity(), out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
+TEST(DoubleToPowerCapTest, RejectsNegativeInfinity_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    EXPECT_FALSE(
+        doubleToPowerCap(-std::numeric_limits<double>::infinity(), out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
+TEST(DoubleToPowerCapTest, RejectsNegativeFinite_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    EXPECT_FALSE(doubleToPowerCap(-1.0, out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
+TEST(DoubleToPowerCapTest, RejectsSmallNegative_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    EXPECT_FALSE(doubleToPowerCap(-0.0001, out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
+TEST(DoubleToPowerCapTest, RejectsJustOverUint32Max_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    // UINT32_MAX is 2^32 - 1 (4294967295), exactly representable as double.
+    // 2^32 = 4294967296.0 is also exactly representable and is just above
+    // UINT32_MAX, so this must be rejected.
+    double overMax = static_cast<double>(std::numeric_limits<uint32_t>::max()) +
+                     1.0;
+    EXPECT_FALSE(doubleToPowerCap(overMax, out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
+TEST(DoubleToPowerCapTest, RejectsFarOverUint32Max_OutUnchanged)
+{
+    uint32_t out = 0xCAFEBABE;
+    EXPECT_FALSE(doubleToPowerCap(1e20, out));
+    EXPECT_EQ(out, 0xCAFEBABEu);
+}
+
 // --- Device State Validation Logic tests ---
 
 TEST(DeviceStateTest, CpuNotReadyForSync_EmptyPath)
@@ -286,6 +378,25 @@ TEST(InterfaceConstantsTest, InterfaceNames)
                  "xyz.openbmc_project.Inventory.Item.Accelerator");
     EXPECT_STREQ(PowerCapInterface, "xyz.openbmc_project.Control.Power.Cap");
     EXPECT_STREQ(PowerCapProperty, "PowerCap");
+}
+
+// --- ObjectManager path constants tests ---
+// Pattern from gpuCpuPowerSyncDiscovery.cpp registerPowerCapSignalHandlers
+
+TEST(ObjectManagerPathTest, SensorPathConstant)
+{
+    EXPECT_STREQ(SensorObjectManagerPath, "/xyz/openbmc_project/sensors");
+    EXPECT_STREQ(DefaultObjectManagerPath, "/");
+}
+
+TEST(ObjectManagerPathTest, PerTypeSelection)
+{
+    auto select = [](DeviceType t) {
+        return (t == DeviceType::CPU) ? SensorObjectManagerPath
+                                      : DefaultObjectManagerPath;
+    };
+    EXPECT_STREQ(select(DeviceType::CPU), SensorObjectManagerPath);
+    EXPECT_STREQ(select(DeviceType::GPU), DefaultObjectManagerPath);
 }
 
 // ============================================================================

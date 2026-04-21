@@ -281,13 +281,13 @@ void GpuCpuPowerSync::processAssociationEndpoints(
     {
         auto it = std::find_if(endpoints.begin(), endpoints.end(),
                                [](const std::string& ep) {
-            return ep.find("TDPPowerVolatile") != std::string::npos;
+            return ep.find("EnforcedEDPc_0") != std::string::npos;
         });
 
         if (it == endpoints.end())
         {
             lg2::debug(
-                "processAssociationEndpoints:: No TDPPowerVolatile for CPU {DEVICE_NAME}",
+                "processAssociationEndpoints:: No EnforcedEDPc_0 for CPU {DEVICE_NAME}",
                 "DEVICE_NAME", deviceName);
             return;
         }
@@ -445,18 +445,24 @@ void GpuCpuPowerSync::registerPowerCapSignalHandlers(
     DeviceType type, DeviceInfo& deviceInfo, const std::string& deviceName,
     const std::string& locationContext, const std::string& powerLimitPath)
 {
+    const char* watchIface = (type == DeviceType::CPU) ? SensorValueInterface
+                                                       : PowerCapInterface;
+    const char* watchManagerPath = (type == DeviceType::CPU)
+                                       ? SensorObjectManagerPath
+                                       : DefaultObjectManagerPath;
+
     deviceInfo.powerCapChangedSignal =
         std::make_unique<sdbusplus::bus::match_t>(
             static_cast<sdbusplus::bus::bus&>(*bus_),
             sdbusplus::bus::match::rules::propertiesChanged(powerLimitPath,
-                                                            PowerCapInterface),
+                                                            watchIface),
             std::bind_front(&GpuCpuPowerSync::powerCapChangedHandler, this,
                             type, deviceName, locationContext));
 
     deviceInfo.powerCapInterfaceAddedSignal =
         std::make_unique<sdbusplus::bus::match_t>(
             static_cast<sdbusplus::bus::bus&>(*bus_),
-            sdbusplus::bus::match::rules::interfacesAdded("/") +
+            sdbusplus::bus::match::rules::interfacesAdded(watchManagerPath) +
                 sdbusplus::bus::match::rules::argNpath(0, powerLimitPath),
             std::bind_front(&GpuCpuPowerSync::powerCapInterfaceAddedHandler,
                             this, type, deviceName, locationContext,
@@ -506,51 +512,86 @@ void GpuCpuPowerSync::onServiceDiscovered(
         "TYPE", typeStr, "PATH", powerLimitPath, "DEVICE_NAME", deviceName,
         "LOCATION_CONTEXT", locationContext);
 
-    utils::getPropertyAsync<uint32_t>(
-        bus_, serviceName, powerLimitPath, PowerCapInterface, PowerCapProperty,
-        std::bind_front(&GpuCpuPowerSync::onPowerCapRetrieved, this, type,
-                        deviceName, locationContext, powerLimitPath,
-                        serviceName));
+    if (type == DeviceType::CPU)
+    {
+        utils::getPropertyAsync<double>(
+            bus_, serviceName, powerLimitPath, SensorValueInterface,
+            SensorValueProperty,
+            std::bind_front(&GpuCpuPowerSync::onPowerCapRetrievedCpu, this,
+                            deviceName, locationContext, powerLimitPath,
+                            serviceName));
+    }
+    else
+    {
+        utils::getPropertyAsync<uint32_t>(
+            bus_, serviceName, powerLimitPath, PowerCapInterface,
+            PowerCapProperty,
+            std::bind_front(&GpuCpuPowerSync::onPowerCapRetrievedGpu, this,
+                            deviceName, locationContext, powerLimitPath,
+                            serviceName));
+    }
 }
 
-void GpuCpuPowerSync::onPowerCapRetrieved(DeviceType type,
-                                          const std::string& deviceName,
-                                          const std::string& locationContext,
-                                          const std::string& powerLimitPath,
-                                          const std::string& serviceName,
-                                          boost::system::error_code ec,
-                                          uint32_t powerCap)
+void GpuCpuPowerSync::onPowerCapRetrievedGpu(const std::string& deviceName,
+                                             const std::string& locationContext,
+                                             const std::string& powerLimitPath,
+                                             const std::string& serviceName,
+                                             boost::system::error_code ec,
+                                             uint32_t powerCap)
 {
-    const char* typeStr = (type == DeviceType::GPU) ? "GPU" : "CPU";
-
     if (ec)
     {
-        lg2::error("discover{TYPE}Device:: Failed to get power cap: {ERROR}",
-                   "TYPE", typeStr, "ERROR", ec.message());
+        lg2::error("discoverGpuDevice:: Failed to get power cap: {ERROR}",
+                   "ERROR", ec.message());
         powerCap = DefaultPowerCap;
     }
     else
     {
-        lg2::info("discover{TYPE}Device:: Power cap: {POWER_CAP}", "TYPE",
-                  typeStr, "POWER_CAP", powerCap);
+        lg2::info("discoverGpuDevice:: Power cap: {POWER_CAP}", "POWER_CAP",
+                  powerCap);
     }
 
     DeviceInfo& deviceInfo =
-        (type == DeviceType::GPU)
-            ? platformCpuGpuMap[locationContext].connectedGpuInfos[deviceName]
-            : platformCpuGpuMap[locationContext].cpuInfo;
+        platformCpuGpuMap[locationContext].connectedGpuInfos[deviceName];
 
     updateDeviceInfo(deviceInfo, powerLimitPath, serviceName, PowerCapInterface,
                      PowerCapProperty, powerCap);
 
-    if (type == DeviceType::GPU)
+    setPowerCapOnGpu(deviceName, locationContext);
+}
+
+void GpuCpuPowerSync::onPowerCapRetrievedCpu(const std::string& deviceName,
+                                             const std::string& locationContext,
+                                             const std::string& powerLimitPath,
+                                             const std::string& serviceName,
+                                             boost::system::error_code ec,
+                                             double rawValue)
+{
+    uint32_t powerCap = DefaultPowerCap;
+
+    if (ec)
     {
-        setPowerCapOnGpu(deviceName, locationContext);
+        lg2::error("discoverCpuDevice:: Failed to get power cap: {ERROR}",
+                   "ERROR", ec.message());
+    }
+    else if (!doubleToPowerCap(rawValue, powerCap))
+    {
+        lg2::error(
+            "discoverCpuDevice:: Invalid CPU power cap value (NaN/Inf/negative): {VALUE}",
+            "VALUE", rawValue);
+        powerCap = DefaultPowerCap;
     }
     else
     {
-        syncPowerCapForAllGpus(locationContext);
+        lg2::info("discoverCpuDevice:: Power cap: {POWER_CAP}", "POWER_CAP",
+                  powerCap);
     }
+
+    DeviceInfo& deviceInfo = platformCpuGpuMap[locationContext].cpuInfo;
+    updateDeviceInfo(deviceInfo, powerLimitPath, serviceName,
+                     SensorValueInterface, SensorValueProperty, powerCap);
+
+    syncPowerCapForAllGpus(locationContext);
 }
 
 void GpuCpuPowerSync::discoverGpuDevice(const std::string& deviceName,
@@ -581,10 +622,10 @@ void GpuCpuPowerSync::discoverCpuViaPowerLimitAssociation(
 {
     std::string deviceName =
         std::filesystem::path(objectPath).filename().string();
-    std::string associationPath = objectPath + "/power_controls";
+    std::string associationPath = objectPath + "/primary_power_sensor";
 
     lg2::info(
-        "discoverCpuViaPowerLimitAssociation:: Power Controls association for Device: {DEVICE_NAME} locationContext: {LOCATION_CONTEXT} is {ASSOCIATION_PATH}",
+        "discoverCpuViaPowerLimitAssociation:: Primary Power Sensor association for Device: {DEVICE_NAME} locationContext: {LOCATION_CONTEXT} is {ASSOCIATION_PATH}",
         "DEVICE_NAME", deviceName, "LOCATION_CONTEXT", locationContext,
         "ASSOCIATION_PATH", associationPath);
 
@@ -635,10 +676,10 @@ void GpuCpuPowerSync::discoverCpuViaPowerLimitAssociation(
         {
             for (const auto& endpoint : endpoints)
             {
-                if (endpoint.find("TDPPowerVolatile") != std::string::npos)
+                if (endpoint.find("EnforcedEDPc_0") != std::string::npos)
                 {
                     lg2::info(
-                        "discoverCpuViaPowerLimitAssociation:: TDPPowerVolatile found on Object Path: {OBJECT_PATH} for Device: {DEVICE_NAME} locationContext: {LOCATION_CONTEXT}",
+                        "discoverCpuViaPowerLimitAssociation:: EnforcedEDPc_0 found on Object Path: {OBJECT_PATH} for Device: {DEVICE_NAME} locationContext: {LOCATION_CONTEXT}",
                         "OBJECT_PATH", endpoint, "DEVICE_NAME", deviceName,
                         "LOCATION_CONTEXT", locationContext);
                     discoverCpuDevice(deviceName, locationContext, endpoint);
@@ -668,7 +709,7 @@ void GpuCpuPowerSync::discoverCpuDevice(const std::string& deviceName,
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", powerLimitPath,
-        std::vector<std::string>{PowerCapInterface});
+        std::vector<std::string>{SensorValueInterface});
 }
 
 } // namespace nvidia::power::balancer

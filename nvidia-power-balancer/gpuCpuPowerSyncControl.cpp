@@ -115,37 +115,62 @@ void GpuCpuPowerSync::powerCapChangedHandler(DeviceType type,
     utils::PropertyMap properties;
     msg.read(interface, properties);
 
+    const char* targetProp = (type == DeviceType::CPU) ? SensorValueProperty
+                                                       : PowerCapProperty;
+
     for (const auto& [property, value] : properties)
     {
-        if (property == PowerCapProperty)
+        if (property != targetProp)
         {
-            uint32_t powerCap = std::get<uint32_t>(value);
-            lg2::info(
-                "Power cap changed Device: {DEVICE_NAME} on Location Context: {LOCATION_CONTEXT} on Object Path: {OBJECT_PATH} value is {POWER_CAP}",
-                "DEVICE_NAME", deviceName, "LOCATION_CONTEXT", locationContext,
-                "OBJECT_PATH", objectPath, "POWER_CAP", powerCap);
+            continue;
+        }
+
+        uint32_t powerCap = DefaultPowerCap;
+        try
+        {
             if (type == DeviceType::CPU)
             {
-                auto& moduleInfo = platformCpuGpuMap[locationContext];
-                moduleInfo.cpuInfo.powerCapValue = powerCap;
-                syncPowerCapForAllGpus(locationContext);
-            }
-            else if (type == DeviceType::GPU)
-            {
-                if (powerCap == PowerCapInvalid)
+                double raw = std::get<double>(value);
+                if (!doubleToPowerCap(raw, powerCap))
                 {
-                    lg2::info(
-                        "Device : {DEVICE} on LocationContext: {LOCATION_CONTEXT} went offline, PowerCapValue : {POWER_CAP}",
-                        "DEVICE", deviceName, "LOCATION_CONTEXT",
-                        locationContext, "POWER_CAP", powerCap);
-                    return;
+                    lg2::error(
+                        "powerCapChangedHandler:: Invalid CPU power cap value (NaN/Inf/negative) on {OBJECT_PATH}: {VALUE}. Resetting CPU power cap to {DEFAULT}.",
+                        "OBJECT_PATH", objectPath, "VALUE", raw, "DEFAULT",
+                        DefaultPowerCap);
+                    powerCap = DefaultPowerCap;
                 }
-
-                auto& gpuInfo = platformCpuGpuMap[locationContext]
-                                    .connectedGpuInfos[deviceName];
-                gpuInfo.powerCapValue = powerCap;
-                setPowerCapOnGpu(deviceName, locationContext);
             }
+            else
+            {
+                powerCap = std::get<uint32_t>(value);
+            }
+        }
+        catch (const std::bad_variant_access& e)
+        {
+            lg2::error(
+                "powerCapChangedHandler:: Unexpected variant type for {PROPERTY} on {OBJECT_PATH}: {ERROR}",
+                "PROPERTY", property, "OBJECT_PATH", objectPath, "ERROR",
+                e.what());
+            powerCap = DefaultPowerCap;
+        }
+
+        lg2::info(
+            "Power cap changed Device: {DEVICE_NAME} on Location Context: {LOCATION_CONTEXT} on Object Path: {OBJECT_PATH} value is {POWER_CAP}",
+            "DEVICE_NAME", deviceName, "LOCATION_CONTEXT", locationContext,
+            "OBJECT_PATH", objectPath, "POWER_CAP", powerCap);
+
+        if (type == DeviceType::CPU)
+        {
+            auto& moduleInfo = platformCpuGpuMap[locationContext];
+            moduleInfo.cpuInfo.powerCapValue = powerCap;
+            syncPowerCapForAllGpus(locationContext);
+        }
+        else if (type == DeviceType::GPU)
+        {
+            auto& gpuInfo = platformCpuGpuMap[locationContext]
+                                .connectedGpuInfos[deviceName];
+            gpuInfo.powerCapValue = powerCap;
+            setPowerCapOnGpu(deviceName, locationContext);
         }
     }
 }
@@ -165,19 +190,52 @@ void GpuCpuPowerSync::powerCapInterfaceAddedHandler(
         "DEVICE_NAME", deviceName, "LOCATION_CONTEXT", locationContext,
         "OBJECT_PATH", objectPath);
 
-    auto ifaceIt = interfaces.find(PowerCapInterface);
+    const char* targetIface = (type == DeviceType::CPU) ? SensorValueInterface
+                                                        : PowerCapInterface;
+    const char* targetProp = (type == DeviceType::CPU) ? SensorValueProperty
+                                                       : PowerCapProperty;
+
+    auto ifaceIt = interfaces.find(targetIface);
     if (ifaceIt == interfaces.end())
     {
         return;
     }
 
-    auto propIt = ifaceIt->second.find(PowerCapProperty);
+    auto propIt = ifaceIt->second.find(targetProp);
     if (propIt == ifaceIt->second.end())
     {
         return;
     }
 
-    uint32_t powerCap = std::get<uint32_t>(propIt->second);
+    uint32_t powerCap = DefaultPowerCap;
+    try
+    {
+        if (type == DeviceType::CPU)
+        {
+            double raw = std::get<double>(propIt->second);
+            if (!doubleToPowerCap(raw, powerCap))
+            {
+                lg2::error(
+                    "powerCapInterfaceAddedHandler:: Invalid CPU power cap value (NaN/Inf/negative) on {OBJECT_PATH}: {VALUE}. Resetting CPU power cap to {DEFAULT}.",
+                    "OBJECT_PATH", objectPath, "VALUE", raw, "DEFAULT",
+                    DefaultPowerCap);
+                powerCap = DefaultPowerCap;
+            }
+        }
+        else
+        {
+            powerCap = std::get<uint32_t>(propIt->second);
+        }
+    }
+    catch (const std::bad_variant_access& e)
+    {
+        lg2::error(
+            "powerCapInterfaceAddedHandler:: Unexpected variant type for {PROPERTY} on {OBJECT_PATH}: {ERROR}",
+            "PROPERTY", targetProp, "OBJECT_PATH", objectPath, "ERROR",
+            e.what());
+        return;
+    }
+
     lg2::info(
         "Power cap added on Device: {DEVICE_NAME} on {LOCATION_CONTEXT} on {OBJECT_PATH} value is {POWER_CAP}",
         "DEVICE_NAME", deviceName, "LOCATION_CONTEXT", locationContext,
@@ -185,9 +243,10 @@ void GpuCpuPowerSync::powerCapInterfaceAddedHandler(
 
     bus_->async_method_call(
         [this, type, processorPowerLimitPath, deviceName, locationContext,
-         powerCap](boost::system::error_code ec,
-                   std::map<std::string, std::vector<std::string>>
-                       servicesAndInterfaces) {
+         powerCap, targetIface,
+         targetProp](boost::system::error_code ec,
+                     std::map<std::string, std::vector<std::string>>
+                         servicesAndInterfaces) {
         if (ec)
         {
             lg2::error(
@@ -217,21 +276,21 @@ void GpuCpuPowerSync::powerCapInterfaceAddedHandler(
             auto& gpuInfo = platformCpuGpuMap[locationContext]
                                 .connectedGpuInfos[deviceName];
             updateDeviceInfo(gpuInfo, processorPowerLimitPath, serviceName,
-                             PowerCapInterface, PowerCapProperty, powerCap);
+                             targetIface, targetProp, powerCap);
             setPowerCapOnGpu(deviceName, locationContext);
         }
         else if (type == DeviceType::CPU)
         {
             auto& cpuInfo = platformCpuGpuMap[locationContext].cpuInfo;
             updateDeviceInfo(cpuInfo, processorPowerLimitPath, serviceName,
-                             PowerCapInterface, PowerCapProperty, powerCap);
+                             targetIface, targetProp, powerCap);
             syncPowerCapForAllGpus(locationContext);
         }
     },
         "xyz.openbmc_project.ObjectMapper",
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject",
-        processorPowerLimitPath, std::vector<std::string>{PowerCapInterface});
+        processorPowerLimitPath, std::vector<std::string>{targetIface});
 }
 
 } // namespace nvidia::power::balancer

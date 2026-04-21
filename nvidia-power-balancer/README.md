@@ -110,6 +110,35 @@ xyz.openbmc_project.Inventory.Item.Accelerator          interface -         -   
 .Probe                                                  property  s         "FOUND(\'NSM_DEV_BIANCA_GPU_0\')"        emits-change
 .Type                                                   property  s         "xyz.openbmc_project.Inventory.Item.A... emits-change
 
+#### 3. CPU Enforced Power Sensor
+
+The CPU power cap is sourced from a `Sensor.Value` sensor reachable through
+the `primary_power_sensor` association on the CPU inventory object.
+The endpoint path must contain `EnforcedEDPc_0`.
+
+**Note:** Multiple Enforced EDPc sensors per CPU module are not supported.
+The implementation assumes exactly one `EnforcedEDPc_0` endpoint under the
+`primary_power_sensor` association.
+
+**Note:** `InterfacesAdded` for the EDPc sensor is subscribed at the inner
+ObjectManager path `/xyz/openbmc_project/sensors`, since per the D-Bus
+ObjectManager spec the closest ObjectManager ancestor is the canonical
+emitter. The publishing service (e.g. PLDM) must expose
+`org.freedesktop.DBus.ObjectManager` at `/xyz/openbmc_project/sensors`.
+
+**Required Interface:**
+- `xyz.openbmc_project.Sensor.Value`
+  - Property: `Value` (double) - the enforced power cap in watts
+
+**Example:**
+
+busctl introspect xyz.openbmc_project.PLDM /xyz/openbmc_project/sensors/power/ProcessorModule_1_CPU_0_EnforcedEDPc_0
+...
+xyz.openbmc_project.Sensor.Value                      interface -         -
+.Value                                                property  d         900
+.Unit                                                 property  s         "xyz.openbmc_project.Sensor.Value.Unit.Watts"
+...
+
 ### Components
 
 1. **GpuCpuPowerSync** (`gpuCpuPowerSync.hpp`, `gpuCpuPowerSyncDiscovery.cpp`, `gpuCpuPowerSyncControl.cpp`)
@@ -132,7 +161,10 @@ xyz.openbmc_project.Inventory.Item.Accelerator          interface -         -   
 - **xyz.openbmc_project.Inventory.Item.Cpu**: CPU device interface
 - **xyz.openbmc_project.Inventory.Item.Accelerator**: GPU device interface
 - **xyz.openbmc_project.Inventory.Decorator.LocationContext**: Location information used to map CPU with corresponding GPUs
-- **xyz.openbmc_project.Control.Power.Cap**: Power capping interface
+- **xyz.openbmc_project.Control.Power.Cap**: GPU power capping interface
+  (property `PowerCap`, `uint32_t`)
+- **xyz.openbmc_project.Sensor.Value**: CPU enforced power cap sensor
+  (property `Value`, `double`)
 - **xyz.openbmc_project.Association**: Device association interface
 - **com.nvidia.Async.Set**: NVIDIA-specific async property setting
 - **com.nvidia.Async.Status**: NVIDIA-specific async job status
@@ -168,8 +200,9 @@ The service synchronizes CPU power limits to GPU "View CPU Power Limit" property
    - Association points to the CPU's power limit object
 
 2. **CPU Association**:
-   - For each CPU, looks for `power_controls` association
-   - Association points to the CPU's TDP power control object
+   - For each CPU, looks for `primary_power_sensor` association
+   - Association points to the CPU's Enforced EDPc sensor object
+     (endpoint name contains `EnforcedEDPc_0`)
 
 ### Power Synchronization
 
@@ -178,6 +211,11 @@ The service synchronizes CPU power limits to GPU "View CPU Power Limit" property
    - `PropertiesChanged` signal - when existing power cap value is modified
    - `InterfacesAdded` signal - when power cap interface is added (e.g., device comes online)
 3. **Action**: Read new CPU power cap value
+   - For CPU: value is read as `double` from `Sensor.Value.Value`; values
+     that are NaN, infinity, or negative are treated as invalid and the
+     CPU cap is reset to `DefaultPowerCap` (which causes the next sync to
+     be skipped rather than pushing a garbage value to GPUs).
+   - For GPU: value is read as `uint32_t` from `Control.Power.Cap.PowerCap`.
 4. **Propagation**: Set power cap on all associated GPUs using NVIDIA async interface
 5. **Monitoring**: JobMonitor tracks each async operation with with default timeout of 60 second.
 6. **Logging**: Generate Redfish event if operation fails
