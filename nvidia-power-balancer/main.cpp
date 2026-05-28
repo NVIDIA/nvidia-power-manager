@@ -34,9 +34,17 @@ int main(void)
         auto systemBus = std::make_shared<sdbusplus::asio::connection>(io);
 
         systemBus->request_name(BUSNAME);
-        [[maybe_unused]] sdbusplus::asio::object_server objectServer(systemBus);
+        sdbusplus::asio::object_server objectServer(systemBus);
         nvidia::power::balancer::GpuCpuPowerSync gpuCpuPowerSync(systemBus);
+
         lg2::info("nvidia-power-balancerd started");
+
+        auto logDumpIface = objectServer.add_interface(
+            "/com/Nvidia/PowerBalancer", "com.nvidia.Common.LogDump");
+        logDumpIface->register_method(
+            "LogDump", [&gpuCpuPowerSync]() { gpuCpuPowerSync.logDump(); });
+        logDumpIface->initialize();
+
         io.run();
         lg2::info("nvidia-power-balancerd stopped");
         return 0;

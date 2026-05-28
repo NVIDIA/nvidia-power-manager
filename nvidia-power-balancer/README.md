@@ -220,6 +220,55 @@ The service synchronizes CPU power limits to GPU "View CPU Power Limit" property
 5. **Monitoring**: JobMonitor tracks each async operation with with default timeout of 60 second.
 6. **Logging**: Generate Redfish event if operation fails
 
+### Diagnostic Dump
+
+The service exposes a diagnostic D-Bus method that logs the entire discovered
+`LocationContext -> CPU + GPUs` map (the contents of `platformCpuGpuMap`) to
+the systemd journal at warning level. One multi-line journal entry is emitted
+per `LocationContext`, listing the connected GPUs and the resolved D-Bus
+addressing plus cached power-cap values for the CPU and each GPU.
+
+- **Service**:    `com.Nvidia.PowerBalancer`
+- **Object Path**: `/com/Nvidia/PowerBalancer`
+- **Interface**:  `com.nvidia.Common.LogDump`
+- **Method**:     `LogDump`  (no arguments, no return value)
+
+Example:
+
+    busctl call com.Nvidia.PowerBalancer /com/Nvidia/PowerBalancer \
+        com.nvidia.Common.LogDump LogDump
+    journalctl -u nvidia-power-balancerd --since "5 seconds ago"
+
+Sample output (one entry per LocationContext):
+
+    PowerBalancer Discovered Info Dump moduleCount=1
+
+    Inventory paths discovered (count=3):
+        [CPU] LocationContext=HGX_Chassis_0/ProcessorModule_0  ObjectPath=/xyz/openbmc_project/inventory/system/cpu/CPU_0
+        [GPU] LocationContext=HGX_Chassis_0/ProcessorModule_0  ObjectPath=/xyz/openbmc_project/inventory/system/accelerator/GPU_0
+        [GPU] LocationContext=HGX_Chassis_0/ProcessorModule_0  ObjectPath=/xyz/openbmc_project/inventory/system/accelerator/GPU_1
+
+    Location Context : HGX_Chassis_0/ProcessorModule_0
+        GPUs = GPU_0 GPU_1
+
+        CPU
+          Power Sensor ServiceName : xyz.openbmc_project.PLDM
+          Power Sensor ObjectPath  : /xyz/openbmc_project/sensors/power/ProcessorModule_0_CPU_0_EnforcedEDPc_0
+          Power Sensor Interface   : xyz.openbmc_project.Sensor.Value
+          Power Sensor Reading     : 900
+
+        GPU_0
+          Power Cap ServiceName : xyz.openbmc_project.NSM
+          Power Cap ObjectPath  : /xyz/openbmc_project/inventory/system/accelerator/GPU_0/Processor_Base_Power_Limit
+          Power Cap Interface   : xyz.openbmc_project.Control.Power.Cap
+          Power Cap Reading     : 900
+
+        GPU_1
+          ...
+
+Empty or unset fields are printed as-is, which makes it easy to spot devices
+that have not yet finished discovery (e.g. CPU sensor not resolved yet).
+
 ## Configuration
 
 ### Build Options
