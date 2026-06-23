@@ -34,7 +34,7 @@ using namespace nvidia::power::common;
 namespace nvidia::power::manager
 {
 
-PSUManager::PSUManager(sdbusplus::bus::bus& bus, std::string baseInvPath) :
+PSUManager::PSUManager(sdbusplus::bus_t& bus, std::string baseInvPath) :
     bus(bus), baseInventoryPath(baseInvPath)
 {
 

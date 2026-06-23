@@ -31,8 +31,7 @@ using namespace nvidia::cpld::common;
 namespace nvidia::cpld::manager
 {
 
-CPLDManager::CPLDManager(sdbusplus::bus::bus& bus, std::string basePath) :
-    bus(bus)
+CPLDManager::CPLDManager(sdbusplus::bus_t& bus, std::string basePath) : bus(bus)
 {
     using namespace sdeventplus;
 

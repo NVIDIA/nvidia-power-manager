@@ -67,7 +67,7 @@ using AssetObject = sdbusplus::server::object::object<
 class SoftwareAsset : public AssetObject
 {
   public:
-    SoftwareAsset(sdbusplus::bus::bus& bus, const std::string& path,
+    SoftwareAsset(sdbusplus::bus_t& bus, const std::string& path,
                   const std::string& manufacturer, const std::string& model,
                   const std::string& partNumber,
                   const std::string& serialNumber) :
@@ -90,7 +90,7 @@ class VersionInterface : public VersionObject
      * @param path
      * @param fwversion
      */
-    VersionInterface(sdbusplus::bus::bus& bus, const std::string& path,
+    VersionInterface(sdbusplus::bus_t& bus, const std::string& path,
                      std::string& fwversion) :
         VersionObject(bus, path.c_str(), action::emit_interface_added)
     {
@@ -112,7 +112,7 @@ class Association : public AssociationObject
      * @param path
      * @param fwAssociation
      */
-    Association(sdbusplus::bus::bus& bus, const std::string& path,
+    Association(sdbusplus::bus_t& bus, const std::string& path,
                 AssociationList& fwAssociation) :
         AssociationObject(bus, path.c_str(), action::emit_interface_added)
     {
@@ -133,7 +133,7 @@ class Cpld : public CpldInherit, public Util
     Cpld& operator=(Cpld&&) = delete;
     ~Cpld() = default;
 
-    Cpld(sdbusplus::bus::bus& bus, const std::string& objPath, uint8_t busN,
+    Cpld(sdbusplus::bus_t& bus, const std::string& objPath, uint8_t busN,
          uint8_t address, const std::string& name, const std::string& modelN,
          const std::string& manufacturerN, const std::string& assoc,
          const std::string& locationTypeN) :
@@ -183,7 +183,7 @@ class Cpld : public CpldInherit, public Util
         }
     }
 
-    void registerAssociationInterface(sdbusplus::bus::bus& bus,
+    void registerAssociationInterface(sdbusplus::bus_t& bus,
                                       const std::string& ifPath,
                                       const std::string& assoc)
     {
@@ -206,7 +206,7 @@ class Cpld : public CpldInherit, public Util
         AssociationObj =
             std::make_unique<Association>(bus, swpath, fwAssociation);
     }
-    void registerSoftwareVersion(sdbusplus::bus::bus& bus,
+    void registerSoftwareVersion(sdbusplus::bus_t& bus,
                                  const std::string& ifPath)
     {
         std::string swpath = SW_INV_PATH;
@@ -240,8 +240,7 @@ class Cpld : public CpldInherit, public Util
     /**
      * @brief Create Asset interface under software inventory path
      */
-    void createSoftwareAsset(sdbusplus::bus::bus& bus,
-                             const std::string& ifPath)
+    void createSoftwareAsset(sdbusplus::bus_t& bus, const std::string& ifPath)
     {
         std::string swpath = SW_INV_PATH;
         std::string fName = std::filesystem::path(ifPath).filename().string();
@@ -254,7 +253,7 @@ class Cpld : public CpldInherit, public Util
 
   private:
     /** @brief systemd bus member */
-    sdbusplus::bus::bus& bus;
+    sdbusplus::bus_t& bus;
     std::string inventoryPath;
     std::unique_ptr<VersionInterface> VersionObj;
     std::unique_ptr<Association> AssociationObj;

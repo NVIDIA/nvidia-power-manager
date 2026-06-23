@@ -39,8 +39,7 @@ using PropertyMap = std::map<PropertyName, PropertyValue>;
 using InterfaceMap = std::map<InterfaceName, PropertyMap>;
 using ServiceMap = std::map<ServiceName, InterfaceList>;
 using GetSubTreeResponse = std::map<ObjectPath, ServiceMap>;
-using ManagedObjectsResponse =
-    std::map<sdbusplus::message::object_path, InterfaceMap>;
+using ManagedObjectsResponse = std::map<sdbusplus::object_path, InterfaceMap>;
 
 /**
  * @brief Asynchronously get a D-Bus property
@@ -246,9 +245,8 @@ void setPropertyAsyncNvidia(
     std::function<void(boost::system::error_code, std::string)> callback)
 {
     bus->async_method_call(
-        [serviceName, propertyName,
-         callback](boost::system::error_code ec,
-                   sdbusplus::message::object_path jobPath) {
+        [serviceName, propertyName, callback](boost::system::error_code ec,
+                                              sdbusplus::object_path jobPath) {
         if (ec)
         {
             lg2::error(

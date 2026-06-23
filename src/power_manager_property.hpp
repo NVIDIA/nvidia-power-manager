@@ -183,7 +183,7 @@ class Property
      * @param[in] powerCappingInfo - power capping structure
      */
     template <typename PropertyChangeCallback>
-    Property(sdbusplus::bus::bus& bus,
+    Property(sdbusplus::bus_t& bus,
              std::shared_ptr<sdbusplus::asio::dbus_interface> enabledInterface,
              nlohmann::json Jsondata, PowerCappingInfo& powerCappingInfo,
              std::string module, PropertyChangeCallback&& propertyChangeFunc) :
@@ -546,7 +546,7 @@ class Property
     /**
      * The D-Bus object
      */
-    sdbusplus::bus::bus& Bus;
+    sdbusplus::bus_t& Bus;
     std::shared_ptr<sdbusplus::asio::dbus_interface> iface;
 
     nlohmann::json propJson;

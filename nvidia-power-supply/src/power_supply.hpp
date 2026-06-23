@@ -83,7 +83,7 @@ class VersionInterface : public VersionObject
      * @param path
      * fwversion
      */
-    VersionInterface(sdbusplus::bus::bus& bus, const std::string& path,
+    VersionInterface(sdbusplus::bus_t& bus, const std::string& path,
                      std::string& fwversion) :
         VersionObject(bus, path.c_str(), action::emit_interface_added)
     {
@@ -104,7 +104,7 @@ class PowerSupplySensor : public PowerSupplySensorInherit
      * @param bus
      * @param path
      */
-    PowerSupplySensor(sdbusplus::bus::bus& bus, const std::string& path) :
+    PowerSupplySensor(sdbusplus::bus_t& bus, const std::string& path) :
         PowerSupplySensorInherit(bus, path.c_str(),
                                  action::emit_interface_added)
     {}
@@ -123,7 +123,7 @@ class Association : public AssociationObject
      * @param path
      * @param fwAssociation
      */
-    Association(sdbusplus::bus::bus& bus, const std::string& path,
+    Association(sdbusplus::bus_t& bus, const std::string& path,
                 AssociationList& fwAssociation) :
         AssociationObject(bus, path.c_str(), action::emit_interface_added)
     {
@@ -153,7 +153,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
      * @param name
      * @param assoc
      */
-    PowerSupply(sdbusplus::bus::bus& bus, const std::string& objPath,
+    PowerSupply(sdbusplus::bus_t& bus, const std::string& objPath,
                 const std::string& cmdUtilityName, const std::string& name,
                 const std::string& assoc) :
         PowerSupplyInherit(bus, (objPath).c_str()),
@@ -183,7 +183,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
         createAssociation(assoc);
     }
 
-    void registerAssociationInterface(sdbusplus::bus::bus& bus,
+    void registerAssociationInterface(sdbusplus::bus_t& bus,
                                       const std::string& ifPath)
     {
         AssociationList fwAssociation;
@@ -198,8 +198,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
             std::make_unique<Association>(bus, swpath, fwAssociation);
     }
 
-    void registerSensorObject(sdbusplus::bus::bus& bus,
-                              const std::string& ifPath)
+    void registerSensorObject(sdbusplus::bus_t& bus, const std::string& ifPath)
     {
         std::string swpath = PSU_SENSOR_PATH;
         swpath += "/" + std::filesystem::path(ifPath).filename().string();
@@ -214,7 +213,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
                 PowerState::State::On);
     }
 
-    void registerSoftwareVersion(sdbusplus::bus::bus& bus,
+    void registerSoftwareVersion(sdbusplus::bus_t& bus,
                                  const std::string& ifPath)
     {
         std::string swpath = SW_INV_PATH;
@@ -256,7 +255,7 @@ class PowerSupply : public PowerSupplyInherit, public PSShellIntf
 
   private:
     /** @brief systemd bus member */
-    sdbusplus::bus::bus& bus;
+    sdbusplus::bus_t& bus;
     /**
      * @brief inventory Path
      *

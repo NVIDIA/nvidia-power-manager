@@ -55,14 +55,14 @@ class PSUManager
      * @param bus
      * @param e
      */
-    PSUManager(sdbusplus::bus::bus& bus, std::string baseInvPath);
+    PSUManager(sdbusplus::bus_t& bus, std::string baseInvPath);
 
   private:
     /**
      * @brief d-Bus
      *
      */
-    sdbusplus::bus::bus& bus;
+    sdbusplus::bus_t& bus;
 
     /**
      * @brief collection of PSUs

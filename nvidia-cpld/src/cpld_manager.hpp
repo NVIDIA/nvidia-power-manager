@@ -44,10 +44,10 @@ class CPLDManager
     CPLDManager(CPLDManager&&) = delete;
     CPLDManager& operator=(CPLDManager&&) = delete;
 
-    CPLDManager(sdbusplus::bus::bus& bus, std::string basePath);
+    CPLDManager(sdbusplus::bus_t& bus, std::string basePath);
 
   private:
-    sdbusplus::bus::bus& bus;
+    sdbusplus::bus_t& bus;
 
     std::vector<std::unique_ptr<Cpld>> cpldInvs;
 };

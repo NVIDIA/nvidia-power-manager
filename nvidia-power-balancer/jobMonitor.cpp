@@ -72,7 +72,7 @@ void JobMonitor::start()
 
     // Create property changed signal handler
     statusSignal_ = std::make_unique<sdbusplus::bus::match_t>(
-        static_cast<sdbusplus::bus::bus&>(*bus_),
+        static_cast<sdbusplus::bus_t&>(*bus_),
         sdbusplus::bus::match::rules::propertiesChanged(
             jobPath_, "com.nvidia.Async.Status"),
         [this](sdbusplus::message::message& msg) { handleStatusChanged(msg); });

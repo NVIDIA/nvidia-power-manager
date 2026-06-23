@@ -23,7 +23,7 @@ GpuCpuPowerSync::GpuCpuPowerSync(
     std::shared_ptr<sdbusplus::asio::connection> bus) :
     bus_(bus),
     emDeviceAddedSignal(
-        static_cast<sdbusplus::bus::bus&>(*bus),
+        static_cast<sdbusplus::bus_t&>(*bus),
         sdbusplus::bus::match::rules::interfacesAdded(
             "/xyz/openbmc_project/inventory") +
             sdbusplus::bus::match::rules::sender(
@@ -86,7 +86,7 @@ GpuCpuPowerSync::GpuCpuPowerSync(
 
 void GpuCpuPowerSync::emDeviceAddedHandler(sdbusplus::message::message& msg)
 {
-    sdbusplus::message::object_path objPath;
+    sdbusplus::object_path objPath;
     utils::InterfaceMap interfaces;
     try
     {
@@ -308,7 +308,7 @@ void GpuCpuPowerSync::associationsInterfaceAddedHandler(
     [[maybe_unused]] const std::string& associationPath,
     sdbusplus::message::message& msg)
 {
-    sdbusplus::message::object_path objPath;
+    sdbusplus::object_path objPath;
     utils::InterfaceMap interfaces;
     msg.read(objPath, interfaces);
 
@@ -376,7 +376,7 @@ void GpuCpuPowerSync::discoverGpuViaCpuPowerAssociation(
         associationsInterfaceAddedSignals.emplace(
             deviceName,
             sdbusplus::bus::match_t(
-                static_cast<sdbusplus::bus::bus&>(*bus_),
+                static_cast<sdbusplus::bus_t&>(*bus_),
                 sdbusplus::bus::match::rules::interfacesAdded("/") +
                     sdbusplus::bus::match::rules::argNpath(0, associationPath) +
                     sdbusplus::bus::match::rules::sender(
@@ -392,7 +392,7 @@ void GpuCpuPowerSync::discoverGpuViaCpuPowerAssociation(
         associationsPropertyChangedSignals.emplace(
             deviceName,
             sdbusplus::bus::match_t(
-                static_cast<sdbusplus::bus::bus&>(*bus_),
+                static_cast<sdbusplus::bus_t&>(*bus_),
                 sdbusplus::bus::match::rules::propertiesChanged(
                     associationPath, AssociationInterface),
                 std::bind_front(
@@ -453,7 +453,7 @@ void GpuCpuPowerSync::registerPowerCapSignalHandlers(
 
     deviceInfo.powerCapChangedSignal =
         std::make_unique<sdbusplus::bus::match_t>(
-            static_cast<sdbusplus::bus::bus&>(*bus_),
+            static_cast<sdbusplus::bus_t&>(*bus_),
             sdbusplus::bus::match::rules::propertiesChanged(powerLimitPath,
                                                             watchIface),
             std::bind_front(&GpuCpuPowerSync::powerCapChangedHandler, this,
@@ -461,7 +461,7 @@ void GpuCpuPowerSync::registerPowerCapSignalHandlers(
 
     deviceInfo.powerCapInterfaceAddedSignal =
         std::make_unique<sdbusplus::bus::match_t>(
-            static_cast<sdbusplus::bus::bus&>(*bus_),
+            static_cast<sdbusplus::bus_t&>(*bus_),
             sdbusplus::bus::match::rules::interfacesAdded(watchManagerPath) +
                 sdbusplus::bus::match::rules::argNpath(0, powerLimitPath),
             std::bind_front(&GpuCpuPowerSync::powerCapInterfaceAddedHandler,
@@ -635,7 +635,7 @@ void GpuCpuPowerSync::discoverCpuViaPowerLimitAssociation(
         associationsInterfaceAddedSignals.emplace(
             deviceName,
             sdbusplus::bus::match_t(
-                static_cast<sdbusplus::bus::bus&>(*bus_),
+                static_cast<sdbusplus::bus_t&>(*bus_),
                 sdbusplus::bus::match::rules::interfacesAdded("/") +
                     sdbusplus::bus::match::rules::argNpath(0, associationPath) +
                     sdbusplus::bus::match::rules::sender(
@@ -652,7 +652,7 @@ void GpuCpuPowerSync::discoverCpuViaPowerLimitAssociation(
         associationsPropertyChangedSignals.emplace(
             deviceName,
             sdbusplus::bus::match_t(
-                static_cast<sdbusplus::bus::bus&>(*bus_),
+                static_cast<sdbusplus::bus_t&>(*bus_),
                 sdbusplus::bus::match::rules::propertiesChanged(
                     associationPath, AssociationInterface),
                 std::bind_front(

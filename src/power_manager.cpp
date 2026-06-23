@@ -42,7 +42,7 @@ constexpr int maxTotalPowerConsumption = 100;
 
 std::string util::getService(const std::string& path,
                              const std::string& interface,
-                             sdbusplus::bus::bus& bus, bool logError)
+                             sdbusplus::bus_t& bus, bool logError)
 {
     auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
                                       MAPPER_INTERFACE, "GetObject");
@@ -71,7 +71,7 @@ std::string util::getService(const std::string& path,
 }
 
 std::map<std::string, std::vector<std::string>>
-    util::getInterfaces(const std::string& path, sdbusplus::bus::bus& bus)
+    util::getInterfaces(const std::string& path, sdbusplus::bus_t& bus)
 {
     auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
                                       MAPPER_INTERFACE, "GetObject");
@@ -89,7 +89,7 @@ std::map<std::string, std::vector<std::string>>
 }
 
 std::vector<std::string>
-    util::getSubtreePaths(sdbusplus::bus::bus& bus,
+    util::getSubtreePaths(sdbusplus::bus_t& bus,
                           const std::vector<std::string>& interfaces,
                           const std::string& path)
 {
@@ -194,7 +194,7 @@ int util::dumpPowerCapIntoFile(const char* path, uint8_t* data, int length)
 namespace manager
 {
 
-PowerManager::PowerManager(sdbusplus::bus::bus& bus,
+PowerManager::PowerManager(sdbusplus::bus_t& bus,
                            sdbusplus::asio::object_server& objectServer) :
     bus(bus), objServer(objectServer)
 {

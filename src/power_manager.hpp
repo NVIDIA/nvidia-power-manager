@@ -67,14 +67,14 @@ class PowerManager
      * @param[in] bus - D-Bus bus object
      * @param[in] objectServer - event object
      */
-    PowerManager(sdbusplus::bus::bus& bus,
+    PowerManager(sdbusplus::bus_t& bus,
                  sdbusplus::asio::object_server& objectServer);
 
   private:
     /**
      * The D-Bus object
      */
-    sdbusplus::bus::bus& bus;
+    sdbusplus::bus_t& bus;
 
     /**
      * The json object of the parsed Power configuration Json file

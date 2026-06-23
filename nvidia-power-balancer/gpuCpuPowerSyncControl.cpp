@@ -181,7 +181,7 @@ void GpuCpuPowerSync::powerCapInterfaceAddedHandler(
     const std::string& processorPowerLimitPath,
     sdbusplus::message::message& msg)
 {
-    sdbusplus::message::object_path objPath;
+    sdbusplus::object_path objPath;
     utils::InterfaceMap interfaces;
     msg.read(objPath, interfaces);
     std::string objectPath = objPath.str;

@@ -66,15 +66,15 @@ constexpr auto PROPERTY_INTF = "org.freedesktop.DBus.Properties";
  * @return The service name
  */
 std::string getService(const std::string& path, const std::string& interface,
-                       sdbusplus::bus::bus& bus, bool logError = true);
+                       sdbusplus::bus_t& bus, bool logError = true);
 
 std::vector<std::string>
-    getSubtreePaths(sdbusplus::bus::bus& bus,
+    getSubtreePaths(sdbusplus::bus_t& bus,
                     const std::vector<std::string>& interfaces,
                     const std::string& path);
 
 std::map<std::string, std::vector<std::string>>
-    getInterfaces(const std::string& path, sdbusplus::bus::bus& bus);
+    getInterfaces(const std::string& path, sdbusplus::bus_t& bus);
 
 /**
  * @brief Read a D-Bus property
@@ -89,7 +89,7 @@ std::map<std::string, std::vector<std::string>>
 template <typename T>
 void getProperty(const std::string& interface, const std::string& propertyName,
                  const std::string& path, const std::string& service,
-                 sdbusplus::bus::bus& bus, T& value)
+                 sdbusplus::bus_t& bus, T& value)
 {
     std::variant<T> property;
 
@@ -117,7 +117,7 @@ void getProperty(const std::string& interface, const std::string& propertyName,
 template <typename T>
 void setProperty(const std::string& interface, const std::string& propertyName,
                  const std::string& path, const std::string& service,
-                 sdbusplus::bus::bus& bus, T& value)
+                 sdbusplus::bus_t& bus, T& value)
 {
     std::variant<T> propertyValue(value);
 
