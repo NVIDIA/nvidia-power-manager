@@ -28,6 +28,8 @@
 #include <filesystem>
 #include <limits>
 #include <memory>
+#include <set>
+#include <tuple>
 #include <unordered_map>
 #define AssociationInterface "xyz.openbmc_project.Association"
 #define ObjectMapperService "xyz.openbmc_project.ObjectMapper"
@@ -106,6 +108,15 @@ class GpuCpuPowerSync
     GpuCpuPowerSync(std::shared_ptr<sdbusplus::asio::connection> bus);
     ~GpuCpuPowerSync() = default;
     void run();
+
+    /**
+     * @brief Dump platformCpuGpuMap to the systemd journal at warning level.
+     *        Emits one multi-line entry per LocationContext, listing the
+     *        connected GPUs and the resolved D-Bus addressing plus cached
+     *        power-cap values for the CPU and each GPU. Invoked via the
+     *        com.nvidia.Common.LogDump.LogDump D-Bus method.
+     */
+    void logDump();
 
   protected:
     // Testable methods - exposed as protected for unit testing
@@ -210,5 +221,10 @@ class GpuCpuPowerSync
         associationsInterfaceAddedSignals;
     std::unordered_map<std::string, sdbusplus::bus::match_t>
         associationsPropertyChangedSignals;
+
+    using InventoryDevice =
+        std::tuple<std::string /*objectPath*/, std::string /*locationContext*/,
+                   DeviceType>;
+    std::set<InventoryDevice> inventoryDevices_;
 };
 } // namespace nvidia::power::balancer

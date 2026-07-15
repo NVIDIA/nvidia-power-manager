@@ -363,6 +363,8 @@ void GpuCpuPowerSync::associationsPropertyChangedHandler(
 void GpuCpuPowerSync::discoverGpuViaCpuPowerAssociation(
     const std::string& objectPath, const std::string& locationContext)
 {
+    inventoryDevices_.emplace(objectPath, locationContext, DeviceType::GPU);
+
     std::string deviceName =
         std::filesystem::path(objectPath).filename().string();
     std::string associationPath = objectPath + "/GPU_copy_Cpu_Power";
@@ -620,6 +622,8 @@ void GpuCpuPowerSync::discoverGpuDevice(const std::string& deviceName,
 void GpuCpuPowerSync::discoverCpuViaPowerLimitAssociation(
     const std::string& objectPath, const std::string& locationContext)
 {
+    inventoryDevices_.emplace(objectPath, locationContext, DeviceType::CPU);
+
     std::string deviceName =
         std::filesystem::path(objectPath).filename().string();
     std::string associationPath = objectPath + "/primary_power_sensor";
@@ -710,6 +714,63 @@ void GpuCpuPowerSync::discoverCpuDevice(const std::string& deviceName,
         "/xyz/openbmc_project/object_mapper",
         "xyz.openbmc_project.ObjectMapper", "GetObject", powerLimitPath,
         std::vector<std::string>{SensorValueInterface});
+}
+
+void GpuCpuPowerSync::logDump()
+{
+    lg2::warning("PowerBalancer Discovered Info Dump moduleCount={COUNT}",
+                 "COUNT", platformCpuGpuMap.size());
+
+    std::string inventoryList;
+    for (const auto& [path, lc, type] : inventoryDevices_)
+    {
+        const char* typeStr = (type == DeviceType::GPU) ? "GPU" : "CPU";
+        inventoryList += std::string("    [") + typeStr +
+                         "] LocationContext=" + lc + "  ObjectPath=" + path +
+                         "\n";
+    }
+    lg2::warning("Inventory paths discovered (count={COUNT}):\n{LIST}", "COUNT",
+                 inventoryDevices_.size(), "LIST", inventoryList);
+
+    for (const auto& [locationContext, moduleInfo] : platformCpuGpuMap)
+    {
+        std::string gpuListJoined;
+        std::string gpuBlocks;
+        for (const auto& [gpuName, gi] : moduleInfo.connectedGpuInfos)
+        {
+            if (!gpuListJoined.empty())
+            {
+                gpuListJoined += ' ';
+            }
+            gpuListJoined += gpuName;
+
+            gpuBlocks += "\n    " + gpuName + "\n";
+            gpuBlocks += "      Power Cap ServiceName : " + gi.serviceName +
+                         "\n";
+            gpuBlocks += "      Power Cap ObjectPath  : " + gi.objectPath +
+                         "\n";
+            gpuBlocks += "      Power Cap Interface   : " + gi.interfaceName +
+                         "\n";
+            gpuBlocks += "      Power Cap Reading     : " +
+                         std::to_string(gi.powerCapValue) + "\n";
+        }
+
+        const auto& ci = moduleInfo.cpuInfo;
+
+        lg2::warning("\nLocation Context : {LOC}\n"
+                     "    GPUs = {GPUS}\n"
+                     "\n"
+                     "    CPU\n"
+                     "      Power Sensor ServiceName : {CPU_SVC}\n"
+                     "      Power Sensor ObjectPath  : {CPU_PATH}\n"
+                     "      Power Sensor Interface   : {CPU_IFACE}\n"
+                     "      Power Sensor Reading     : {CPU_VAL}"
+                     "{GPU_BLOCKS}",
+                     "LOC", locationContext, "GPUS", gpuListJoined, "CPU_SVC",
+                     ci.serviceName, "CPU_PATH", ci.objectPath, "CPU_IFACE",
+                     ci.interfaceName, "CPU_VAL", ci.powerCapValue,
+                     "GPU_BLOCKS", gpuBlocks);
+    }
 }
 
 } // namespace nvidia::power::balancer
