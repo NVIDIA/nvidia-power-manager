@@ -62,6 +62,14 @@ CPLDManager::CPLDManager(sdbusplus::bus_t& bus, std::string basePath) : bus(bus)
                 assoc = fru.at("ChassisAssociationEndpoint");
             }
 
+            // Parent chassis of the CPLD chassis. Defaults to the
+            // ChassisAssociationEndpoint for platforms that do not set it.
+            std::string parentChassis = assoc;
+            if (fru.contains("ParentChassisEndpoint"))
+            {
+                parentChassis = fru.at("ParentChassisEndpoint");
+            }
+
             if (fru.contains("LocationType"))
             {
                 locType = fru.at("LocationType");
@@ -78,9 +86,9 @@ CPLDManager::CPLDManager(sdbusplus::bus_t& bus, std::string basePath) : bus(bus)
             {
                 continue;
             }
-            auto inv =
-                std::make_unique<Cpld>(bus, invpath, busId, devAddr, id, model,
-                                       manufacturer, assoc, locType);
+            auto inv = std::make_unique<Cpld>(bus, invpath, busId, devAddr, id,
+                                              model, manufacturer, assoc,
+                                              parentChassis, locType);
             cpldInvs.emplace_back(std::move(inv));
         }
         catch (const std::exception& e)

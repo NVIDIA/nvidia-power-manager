@@ -133,10 +133,29 @@ class Cpld : public CpldInherit, public Util
     Cpld& operator=(Cpld&&) = delete;
     ~Cpld() = default;
 
+    /**
+     * @brief Construct a Cpld whose parent chassis is the chassis given by
+     * @p assoc.
+     */
     Cpld(sdbusplus::bus_t& bus, const std::string& objPath, uint8_t busN,
          uint8_t address, const std::string& name, const std::string& modelN,
          const std::string& manufacturerN, const std::string& assoc,
          const std::string& locationTypeN) :
+        Cpld(bus, objPath, busN, address, name, modelN, manufacturerN, assoc,
+             assoc, locationTypeN)
+    {
+    }
+
+    /**
+     * @brief Construct a Cpld with a parent chassis that differs from @p assoc
+     *
+     * @param assoc         object the firmware inventory is associated with
+     * @param parentChassis object the parent_chassis association points at
+     */
+    Cpld(sdbusplus::bus_t& bus, const std::string& objPath, uint8_t busN,
+         uint8_t address, const std::string& name, const std::string& modelN,
+         const std::string& manufacturerN, const std::string& assoc,
+         const std::string& parentChassis, const std::string& locationTypeN) :
         CpldInherit(bus, (objPath).c_str()), bus(bus)
     {
 
@@ -169,9 +188,9 @@ class Cpld : public CpldInherit, public Util
         registerAssociationInterface(bus, objPath, assoc);
         registerSoftwareVersion(bus, objPath);
         createSoftwareAsset(bus, objPath);
-        if (!assoc.empty())
+        if (!parentChassis.empty())
         {
-            createAssociation(assoc);
+            createAssociation(parentChassis);
         }
         if (!locationTypeN.empty())
         {
