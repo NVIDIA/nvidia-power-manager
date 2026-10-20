@@ -22,8 +22,8 @@
 #include "PsuEvent.hpp"
 #include "utils.hpp"
 
-#include <boost/asio/deadline_timer.hpp>
 #include <boost/asio/io_context.hpp>
+#include <boost/asio/system_timer.hpp>
 #include <nlohmann/json.hpp>
 #include <sdbusplus/asio/object_server.hpp>
 #include <xyz/openbmc_project/State/Decorator/PowerState/server.hpp>
@@ -91,7 +91,7 @@ class PsuMonitor
     std::vector<std::shared_ptr<PsuEvent>> psuEvents;
 
     /** @brief timer  */
-    boost::asio::deadline_timer mPollTimer;
+    boost::asio::system_timer mPollTimer;
 
     /** @brief psu i2c details */
     int bus;
