@@ -23,6 +23,7 @@
 #include <sdbusplus/test/sdbus_mock.hpp>
 
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -218,4 +219,55 @@ TEST(CpldTest, JsonFiles)
     tempFileCmd = "rm " + tempname_str;
     ec = system(tempFileCmd.c_str());
     EXPECT_EQ(ec, 0);
+}
+
+class HwMgmtTest : public ::testing::Test
+{
+  protected:
+    std::filesystem::path dir = std::filesystem::temp_directory_path() /
+                                ("hwmgmt-" + std::to_string(getpid()));
+    void SetUp() override
+    {
+        std::filesystem::create_directories(dir);
+    }
+    void TearDown() override
+    {
+        std::filesystem::remove_all(dir);
+    }
+    void put(const std::string& name, const std::string& value)
+    {
+        std::ofstream(dir / name) << value;
+    }
+    std::string read(uint8_t cmd)
+    {
+        return nvidia::cpld::common::hwmgmt::read(cmd, dir,
+                                                  std::chrono::milliseconds(1));
+    }
+};
+
+TEST_F(HwMgmtTest, VersionsAndPartNumbers)
+{
+    put("cpld1_pn", "123\n");
+    put("cpld1_version", "4\n");
+    put("cpld1_version_min", "5\n");
+    put("cpld2_pn", "65535\n");
+    put("cpld3_pn", "7\n");
+    put("cpld3_version", "0x1f\n");
+    EXPECT_EQ(read(0x2d), "CPLD000123_REV0405_CPLD000007_REV3100");
+    EXPECT_EQ(read(0xad), "CPLD000123_CPLD000007");
+    EXPECT_EQ(read(0x9e), "NOT_SUPPORTED");
+    EXPECT_EQ(read(0x99), "");
+}
+
+TEST_F(HwMgmtTest, PlaceholdersOnlyTimesOut)
+{
+    put("cpld1_pn", "0\n");
+    put("cpld2_pn", "65535\n");
+    EXPECT_EQ(read(0x2d), "");
+}
+
+TEST_F(HwMgmtTest, MissingDirectory)
+{
+    std::filesystem::remove_all(dir);
+    EXPECT_EQ(read(0xad), "");
 }
